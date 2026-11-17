@@ -1,0 +1,23 @@
+/* Brand colors with white body text and blue highlights. */
+:root {
+  --brand-burgundy: #550707;
+  --brand-blue: #0599F6;
+  --brand-light-blue: #B8E4FF;
+  --text-white: #FFFFFF;
+
+  --wine: var(--brand-burgundy);
+  --sky: var(--brand-light-blue);
+  --cream: var(--text-white);
+  --muted: color-mix(in srgb, var(--text-white) 78%, var(--brand-burgundy));
+  --surface: var(--brand-burgundy);
+  --line: color-mix(in srgb, var(--text-white) 15%, transparent);
+  --border: color-mix(in srgb, var(--text-white) 30%, transparent);
+  --surface-soft: color-mix(in srgb, var(--text-white) 2%, transparent);
+  --surface-hover: color-mix(in srgb, var(--text-white) 4%, transparent);
+  --focus-ring: color-mix(in srgb, var(--brand-blue) 35%, transparent);
+  --shadow: color-mix(in srgb, var(--brand-burgundy) 45%, transparent);
+  --shadow-strong: color-mix(in srgb, var(--brand-burgundy) 80%, transparent);
+  --photo-shade-soft: color-mix(in srgb, var(--brand-burgundy) 20%, transparent);
+  --photo-shade: color-mix(in srgb, var(--brand-burgundy) 92%, transparent);
+  --backdrop: color-mix(in srgb, var(--brand-burgundy) 88%, transparent);
+}

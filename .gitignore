@@ -1,0 +1,48 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# JavaScript / TypeScript
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+.wrangler/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+
+# Test output
+coverage/
+.coverage
+.coverage.*
+htmlcov/
+test-results/
+playwright-report/
+
+# Runtime data, personal data and local database copies
+uploads/
+logs/
+*.log
+backups/
+*.dump
+*.sql.gz
+pgdata/
+
+# Local editor / OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini

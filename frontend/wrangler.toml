@@ -1,0 +1,4 @@
+# Static Cloudflare Pages project. No Functions, secrets or database bindings.
+# Git build settings: root frontend, command npm run build, output dist.
+name = "poidem-demo"
+pages_build_output_dir = "./dist"
