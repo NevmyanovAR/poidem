@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { ArrowLeft, ArrowRight, Camera, Check, ImagePlus, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { DEMO_PROFILE, INTERESTS } from '../data/demo'
+import { AuthorizationStatus } from '../components/TrustStatus'
 import { PageHeading, Photo } from '../components/ui'
 import { useDemo } from '../state/context'
 import type { Profile } from '../types'
@@ -11,7 +12,7 @@ const BLANK: Profile = { name: '', age: '', gender: '', preference: '', photo: '
 type Errors = Partial<Record<keyof Profile, string>>
 
 export function ProfilePage() {
-  const { data, saveProfile, notify } = useDemo()
+  const { data, saveProfile, notify, fixtureMode, setDemoMode, authorization } = useDemo()
   const [form, setForm] = useState<Profile>(() => data.profile ? { ...data.profile, interests: [...data.profile.interests] } : { ...BLANK, interests: [] })
   const [step, setStep] = useState(1)
   const [errors, setErrors] = useState<Errors>({})
@@ -25,15 +26,15 @@ export function ProfilePage() {
   }
   function validate(firstStep: boolean): Errors {
     const next: Errors = {}
-    if (!form.name.trim() || form.name.trim().length > 40) next.name = 'Укажи имя: от 1 до 40 символов.'
+    if (!form.name.trim() || form.name.trim().length > 40) next.name = 'Укажи имя: от 1 до 40 символов'
     const age = Number(form.age)
-    if (!/^\d+$/.test(form.age) || !Number.isSafeInteger(age) || age < 18) next.age = 'Знакомиться здесь можно только с 18 лет.'
-    if (!form.gender) next.gender = 'Выбери вариант.'
-    if (!form.preference) next.preference = 'Выбери, кого хочешь видеть.'
+    if (!/^\d+$/.test(form.age) || !Number.isSafeInteger(age) || age < 18) next.age = 'Знакомиться здесь можно только с 18 лет'
+    if (!form.gender) next.gender = 'Выбери вариант'
+    if (!form.preference) next.preference = 'Выбери, кого хочешь видеть'
     if (!firstStep) {
-      if (!form.photo) next.photo = 'Добавь фотографию.'
-      if (!form.bio.trim() || form.bio.trim().length > 300) next.bio = 'Напиши пару слов о себе: до 300 символов.'
-      if (form.interests.length !== 3) next.interests = 'Выбери ровно три интереса.'
+      if (!form.photo) next.photo = 'Добавь фотографию'
+      if (!form.bio.trim() || form.bio.trim().length > 300) next.bio = 'Напиши пару слов о себе: до 300 символов'
+      if (form.interests.length !== 3) next.interests = 'Выбери ровно три интереса'
     }
     return next
   }
@@ -44,31 +45,31 @@ export function ProfilePage() {
     if (Object.keys(next).length) { requestAnimationFrame(() => document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()); return }
     if (step === 1) { setStep(2); window.scrollTo(0, 0); return }
     saveProfile({ ...form, name: form.name.trim(), bio: form.bio.trim() })
-    notify('Анкета сохранена.')
+    notify('Анкета сохранена')
     navigate('/home')
   }
   function upload(file: File | undefined) {
     if (!file) return
     setUploadError('')
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setUploadError('Подойдёт JPG, PNG или WebP.'); return }
-    if (file.size > 3 * 1024 * 1024) { setUploadError('Выбери фото размером до 3 МБ.'); return }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { setUploadError('Подойдёт JPG, PNG или WebP'); return }
+    if (file.size > 3 * 1024 * 1024) { setUploadError('Выбери фото размером до 3 МБ'); return }
     setReading(true)
     const reader = new FileReader()
     reader.onload = () => {
       const result = String(reader.result)
       const image = new Image()
       image.onload = () => { update('photo', result); setReading(false) }
-      image.onerror = () => { setUploadError('Не удалось прочитать изображение. Попробуй другое фото.'); setReading(false) }
+      image.onerror = () => { setUploadError('Не удалось прочитать изображение. Попробуй другое фото'); setReading(false) }
       image.src = result
     }
-    reader.onerror = () => { setUploadError('Не удалось открыть файл. Попробуй ещё раз.'); setReading(false) }
+    reader.onerror = () => { setUploadError('Не удалось открыть файл. Попробуй ещё раз'); setReading(false) }
     reader.readAsDataURL(file)
   }
   const error = (key: keyof Profile) => errors[key] ? <span className="field-error" id={`error-${key}`} role="alert">{errors[key]}</span> : null
 
-  return <div className="form-page profile-page"><div className="form-intro"><PageHeading eyebrow="Давай познакомимся" title={data.profile ? 'Твоя анкета.' : 'Немного о тебе.'} italic="Без лишнего.">Всего пара деталей, чтобы найти человека, с которым совпадёт настроение.</PageHeading><div className="profile-editorial"><Photo src="/images/chess.jpeg" alt="Вечер за шахматами — иллюстрация" /><p>Самое интересное<br /><em>не помещается в анкету.</em></p></div></div>
+  return <div className="form-page profile-page"><div className="form-intro"><PageHeading eyebrow="Давай познакомимся" title={data.profile ? 'Твоя анкета' : 'Немного о тебе'}>Всего пара деталей, чтобы найти человека, с которым совпадёт настроение</PageHeading><AuthorizationStatus value={authorization} demoMode={fixtureMode} /><section className="demo-settings" aria-label="Настройки деморежима"><div><h2>Деморежим</h2><p>Вымышленные персонажи, планы и ответы<br />Данные хранятся отдельно на этом устройстве</p></div><button type="button" className="demo-switch" role="switch" aria-label="Демонстрационный режим" aria-checked={fixtureMode} onClick={() => setDemoMode(!fixtureMode)}><span /></button></section><div className="profile-editorial"><Photo src="/images/chess.jpeg" alt="Вечер за шахматами — иллюстрация" /><p>Самое интересное<br /><em>не помещается в анкету</em></p></div></div>
     <form onSubmit={submit} className="form-panel" noValidate><div className="form-progress"><span className={step === 1 ? 'current' : 'complete'}>01 <span>Знакомство</span></span><span className={step === 2 ? 'current' : ''}>02 <span>Твои интересы</span></span></div><div className="form-panel-title"><h2>{step === 1 ? 'Как тебя представить?' : 'Что тебя вдохновляет?'}</h2><button type="button" className="text-link example-fill" onClick={() => { setForm({ ...DEMO_PROFILE, interests: [...DEMO_PROFILE.interests] }); setErrors({}); setUploadError('') }}><Sparkles size={15} />Заполнить примером</button></div>
-      {step === 1 ? <div className="fields"><label className="field">Твоё имя<input autoComplete="given-name" name="name" value={form.name} maxLength={40} placeholder="Как тебя зовут?" aria-invalid={!!errors.name} aria-describedby={errors.name ? 'error-name' : undefined} onChange={e => update('name', e.target.value)} />{error('name')}</label><label className="field">Возраст<input name="age" inputMode="numeric" type="number" min="18" step="1" placeholder="18+" value={form.age} aria-invalid={!!errors.age} aria-describedby={errors.age ? 'error-age' : undefined} onChange={e => update('age', e.target.value)} />{error('age')}</label><label className="field">Твой пол<select name="gender" value={form.gender} aria-invalid={!!errors.gender} aria-describedby={errors.gender ? 'error-gender' : undefined} onChange={e => update('gender', e.target.value as Profile['gender'])}><option value="">Выбрать</option><option value="woman">Женский</option><option value="man">Мужской</option><option value="other">Другой</option></select>{error('gender')}</label><label className="field">Кого хочешь видеть в подборке?<select name="preference" value={form.preference} aria-invalid={!!errors.preference} aria-describedby={errors.preference ? 'error-preference' : undefined} onChange={e => update('preference', e.target.value as Profile['preference'])}><option value="">Выбрать</option><option value="women">Девушек</option><option value="men">Парней</option><option value="any">Всех</option></select>{error('preference')}</label></div> : <div className="fields"><div className="photo-field"><button type="button" className="photo-upload" onClick={() => fileRef.current?.click()} aria-label="Выбрать фотографию" aria-invalid={!!errors.photo} aria-describedby={errors.photo ? 'error-photo' : undefined}>{form.photo ? <Photo src={form.photo} alt="Предпросмотр твоей фотографии" /> : <ImagePlus size={28} />}<span><Camera size={14} /></span></button><div><strong>Одна фотография. Твоя.</strong><p>JPG, PNG или WebP, до 3 МБ.<br />Без отправки на сервер.</p><button className="text-link" type="button" onClick={() => fileRef.current?.click()}>{reading ? 'Читаем фото…' : form.photo ? 'Выбрать другое фото' : 'Добавить фотографию'}</button></div><input className="sr-only" ref={fileRef} tabIndex={-1} type="file" accept="image/jpeg,image/png,image/webp" onChange={e => upload(e.target.files?.[0])} /></div>{error('photo')}{uploadError && <p className="field-error" role="alert">{uploadError}</p>}<label className="field">Пара слов о себе<textarea name="bio" rows={3} maxLength={300} value={form.bio} aria-invalid={!!errors.bio} aria-describedby={errors.bio ? 'error-bio' : undefined} placeholder="Люблю кофе, странные фильмы и спонтанные планы…" onChange={e => update('bio', e.target.value)} /><span className="field-counter">{form.bio.length} / 300</span>{error('bio')}</label><fieldset className="interest-field"><legend>Три твоих интереса <span>{form.interests.length} / 3</span></legend><div className="interest-chips">{INTERESTS.map(interest => <button type="button" key={interest} className={`chip ${form.interests.includes(interest) ? 'selected' : ''}`} aria-pressed={form.interests.includes(interest)} aria-invalid={!!errors.interests} onClick={() => { if (form.interests.includes(interest)) update('interests', form.interests.filter(i => i !== interest)); else if (form.interests.length < 3) update('interests', [...form.interests, interest]); else { setErrors(current => ({ ...current, interests: 'Уже выбрано три. Убери один интерес, чтобы выбрать другой.' })) } }}>{form.interests.includes(interest) && <Check size={13} />}{interest}</button>)}</div>{error('interests')}</fieldset></div>}
-      <div className="form-actions">{step === 2 && <button type="button" className="button button-outline" onClick={() => { setStep(1); setErrors({}) }}><ArrowLeft size={17} />Назад</button>}<button className="button button-primary" type="submit" disabled={reading}>{step === 1 ? 'Продолжить' : 'Сохранить анкету'}<ArrowRight size={18} /></button></div><p className="form-disclaimer">Только для совершеннолетних.</p>
+      {step === 1 ? <div className="fields"><label className="field">Твоё имя<input autoComplete="given-name" name="name" value={form.name} maxLength={40} placeholder="Как тебя зовут?" aria-invalid={!!errors.name} aria-describedby={errors.name ? 'error-name' : undefined} onChange={e => update('name', e.target.value)} />{error('name')}</label><label className="field">Возраст<input name="age" inputMode="numeric" type="number" min="18" step="1" placeholder="18+" value={form.age} aria-invalid={!!errors.age} aria-describedby={errors.age ? 'error-age' : undefined} onChange={e => update('age', e.target.value)} />{error('age')}</label><label className="field">Твой пол<select name="gender" value={form.gender} aria-invalid={!!errors.gender} aria-describedby={errors.gender ? 'error-gender' : undefined} onChange={e => update('gender', e.target.value as Profile['gender'])}><option value="">Выбрать</option><option value="woman">Женский</option><option value="man">Мужской</option><option value="other">Другой</option></select>{error('gender')}</label><label className="field">Кого хочешь видеть в подборке?<select name="preference" value={form.preference} aria-invalid={!!errors.preference} aria-describedby={errors.preference ? 'error-preference' : undefined} onChange={e => update('preference', e.target.value as Profile['preference'])}><option value="">Выбрать</option><option value="women">Девушек</option><option value="men">Парней</option><option value="any">Всех</option></select>{error('preference')}</label></div> : <div className="fields"><div className="photo-field"><button type="button" className="photo-upload" onClick={() => fileRef.current?.click()} aria-label="Выбрать фотографию" aria-invalid={!!errors.photo} aria-describedby={errors.photo ? 'error-photo' : undefined}>{form.photo ? <Photo src={form.photo} alt="Предпросмотр твоей фотографии" /> : <ImagePlus size={28} />}<span><Camera size={14} /></span></button><div><strong>Одна фотография. Твоя</strong><p>JPG, PNG или WebP, до 3 МБ<br />Без отправки на сервер</p><button className="text-link" type="button" onClick={() => fileRef.current?.click()}>{reading ? 'Читаем фото…' : form.photo ? 'Выбрать другое фото' : 'Добавить фотографию'}</button></div><input className="sr-only" ref={fileRef} tabIndex={-1} type="file" accept="image/jpeg,image/png,image/webp" onChange={e => upload(e.target.files?.[0])} /></div>{error('photo')}{uploadError && <p className="field-error" role="alert">{uploadError}</p>}<label className="field">Пара слов о себе<textarea name="bio" rows={3} maxLength={300} value={form.bio} aria-invalid={!!errors.bio} aria-describedby={errors.bio ? 'error-bio' : undefined} placeholder="Люблю кофе, странные фильмы и спонтанные планы…" onChange={e => update('bio', e.target.value)} /><span className="field-counter">{form.bio.length} / 300</span>{error('bio')}</label><fieldset className="interest-field"><legend>Три твоих интереса <span>{form.interests.length} / 3</span></legend><div className="interest-chips">{INTERESTS.map(interest => <button type="button" key={interest} className={`chip ${form.interests.includes(interest) ? 'selected' : ''}`} aria-pressed={form.interests.includes(interest)} aria-invalid={!!errors.interests} onClick={() => { if (form.interests.includes(interest)) update('interests', form.interests.filter(i => i !== interest)); else if (form.interests.length < 3) update('interests', [...form.interests, interest]); else { setErrors(current => ({ ...current, interests: 'Уже выбрано три. Убери один интерес, чтобы выбрать другой' })) } }}>{form.interests.includes(interest) && <Check size={13} />}{interest}</button>)}</div>{error('interests')}</fieldset></div>}
+      <div className="form-actions">{step === 2 && <button type="button" className="button button-outline" onClick={() => { setStep(1); setErrors({}) }}><ArrowLeft size={17} />Назад</button>}<button className="button button-primary" type="submit" disabled={reading}>{step === 1 ? 'Продолжить' : 'Сохранить анкету'}<ArrowRight size={18} /></button></div><p className="form-disclaimer">Только для совершеннолетних</p>
     </form></div>
 }

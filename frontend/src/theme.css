@@ -1,9 +1,24 @@
+@font-face {
+  font-family: 'Nicoletta Script';
+  src: url('/fonts/NicolettaScript-Regular.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 /* Brand colors with white body text and blue highlights. */
 :root {
   --brand-burgundy: #550707;
-  --brand-blue: #0599F6;
   --brand-light-blue: #B8E4FF;
   --text-white: #FFFFFF;
+
+  --text-accent: var(--brand-light-blue);
+  --text-secondary-accent: var(--brand-light-blue);
+  --font-body: 'Manrope', sans-serif;
+  --font-heading: 'Forum', Georgia, serif;
+  --font-accent: 'Nicoletta Script', 'Forum', serif;
+  /* Cyrillic o: Forum ink height .434em / Nicoletta .246em. */
+  --font-accent-scale: 1.76;
 
   --wine: var(--brand-burgundy);
   --sky: var(--brand-light-blue);
@@ -14,7 +29,7 @@
   --border: color-mix(in srgb, var(--text-white) 30%, transparent);
   --surface-soft: color-mix(in srgb, var(--text-white) 2%, transparent);
   --surface-hover: color-mix(in srgb, var(--text-white) 4%, transparent);
-  --focus-ring: color-mix(in srgb, var(--brand-blue) 35%, transparent);
+  --focus-ring: color-mix(in srgb, var(--brand-light-blue) 35%, transparent);
   --shadow: color-mix(in srgb, var(--brand-burgundy) 45%, transparent);
   --shadow-strong: color-mix(in srgb, var(--brand-burgundy) 80%, transparent);
   --photo-shade-soft: color-mix(in srgb, var(--brand-burgundy) 20%, transparent);

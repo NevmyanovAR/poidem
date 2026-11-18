@@ -1,0 +1,10 @@
+Nicoletta script Regular
+Provided by the project owner for the local diploma prototype.
+
+Original embedded copyright:
+Copyright (c) Cirilicna Slova Dodao Nikola Kovanovic., 2005. All rights reserved.
+
+Original embedded usage notice (name ID 13):
+Besplatno za svaku upotrebu osim komercijalne.
+
+The font file is distributed unchanged. The embedded notice excludes commercial use.

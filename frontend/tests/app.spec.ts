@@ -6,16 +6,16 @@ test('welcome, age gate, exactly three interests and profile persistence', async
   await expect(page.getByRole('heading', { name: /Всё начинается/ })).toBeVisible()
   await page.getByRole('link', { name: 'Начать знакомство' }).click()
   await page.getByRole('button', { name: 'Продолжить', exact: true }).click()
-  await expect(page.getByText('Укажи имя: от 1 до 40 символов.')).toBeVisible()
+  await expect(page.getByText('Укажи имя: от 1 до 40 символов')).toBeVisible()
   await page.getByRole('button', { name: 'Заполнить примером' }).click()
   await page.getByRole('spinbutton', { name: 'Возраст' }).fill('17')
   await page.getByRole('button', { name: 'Продолжить', exact: true }).click()
-  await expect(page.getByText('Знакомиться здесь можно только с 18 лет.')).toBeVisible()
+  await expect(page.getByText('Знакомиться здесь можно только с 18 лет')).toBeVisible()
   await page.getByRole('spinbutton', { name: 'Возраст' }).fill('24')
   await page.getByRole('button', { name: 'Продолжить', exact: true }).click()
   await page.getByRole('button', { name: 'Кофе', exact: true }).click()
   await page.getByRole('button', { name: 'Сохранить анкету' }).click()
-  await expect(page.getByText('Выбери ровно три интереса.')).toBeVisible()
+  await expect(page.getByText('Выбери ровно три интереса')).toBeVisible()
   await page.getByRole('button', { name: 'Кофе', exact: true }).click()
   await page.getByRole('button', { name: 'Кино', exact: true }).click()
   await expect(page.getByText('Уже выбрано три.', { exact: false })).toBeVisible()
@@ -30,7 +30,7 @@ test('photo upload validation and actual image preview', async ({ page }) => {
   await page.getByRole('button', { name: 'Заполнить примером' }).click()
   await page.getByRole('button', { name: 'Продолжить', exact: true }).click()
   await page.locator('input[type=file]').setInputFiles({ name: 'fake.txt', mimeType: 'text/plain', buffer: Buffer.from('not an image') })
-  await expect(page.getByText('Подойдёт JPG, PNG или WebP.')).toBeVisible()
+  await expect(page.getByText('Подойдёт JPG, PNG или WebP')).toBeVisible()
   await page.locator('input[type=file]').setInputFiles(fileURLToPath(new URL('../public/images/portrait-sasha.jpeg', import.meta.url)))
   await expect(page.getByRole('img', { name: 'Предпросмотр твоей фотографии' })).toHaveAttribute('src', /^data:image\/jpeg/)
   await page.getByRole('button', { name: 'Сохранить анкету' }).click()
@@ -40,39 +40,34 @@ test('photo upload validation and actual image preview', async ({ page }) => {
   await expect(page.getByRole('img', { name: 'Предпросмотр твоей фотографии' })).toHaveAttribute('src', /^data:image\/jpeg/)
 })
 
-test('catalog filter, one-sided invitation, explicit mutual simulation and protected match URL', async ({ page }) => {
-  await page.goto('/match/unknown')
-  await expect(page.getByRole('heading', { name: 'Для встречи нужны двое' })).toBeVisible()
+test('catalog only lists publications and never substitutes editorial fixtures', async ({ page }) => {
   await page.goto('/catalog')
+  await expect(page.getByRole('heading', { name: 'Пока нет опубликованных планов' })).toBeVisible()
+  await expect(page.locator('.plan-card')).toHaveCount(0)
   await page.getByRole('button', { name: 'Прогулки', exact: true }).click()
-  await expect(page.locator('.plan-card')).toHaveCount(1)
-  await page.getByRole('button', { name: 'Все планы', exact: true }).click()
-  await page.getByRole('link', { name: 'Выбрать план «Выставка, потом кофе»' }).click()
-  await page.getByRole('button', { name: 'Пойдём?', exact: true }).click()
-  await expect(page).toHaveURL('/people/demo-gallery')
-  await expect(page.getByText('Нужен ответ второго человека.', { exact: false })).toBeVisible()
-  await page.getByRole('button', { name: 'Посмотреть совпадение' }).click()
-  await expect(page.getByRole('heading', { name: /Кажется, вам/ })).toBeVisible()
-  await expect(page.locator('.match-page')).toBeVisible()
-  await page.getByRole('button', { name: 'Перейти к общению' }).click()
-  await expect(page.getByRole('dialog')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Общение пока недоступно' })).toBeVisible()
-  await page.getByRole('button', { name: 'Понятно', exact: true }).click()
-  await page.getByRole('link', { name: 'К моим планам', exact: true }).click()
-  await page.getByRole('button', { name: 'Мэтчи', exact: true }).click()
-  await expect(page.locator('.my-plan')).toHaveCount(1)
+  await expect(page.locator('.plan-card')).toHaveCount(0)
   await page.reload()
-  await expect(page.locator('.my-plan')).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Прогулки', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('link', { name: 'Создать первый план', exact: true }).click()
+  await expect(page).toHaveURL('/create')
 })
 
-test('skipping all people shows empty state and can restart', async ({ page }) => {
+test('old fixture deep links and stored invitations do not expose fictional users or matches', async ({ page }) => {
+  await page.goto('/home')
+  await page.evaluate(() => localStorage.setItem('poidem:demo:v1', JSON.stringify({
+    version: 1, profile: null, ownPlans: [], selectedIds: ['demo-gallery'],
+    invites: [{ id: 'old-match', planId: 'demo-gallery', personId: 'demo-sasha', status: 'matched' }],
+  })))
   await page.goto('/people/demo-gallery')
-  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Следующий', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'На сегодня это все' })).toBeVisible()
-  await page.getByRole('button', { name: 'Посмотреть анкеты заново' }).click()
-  await expect(page.getByRole('button', { name: 'Пойдём?', exact: true })).toBeVisible()
-  const invites = await page.evaluate(() => JSON.parse(localStorage.getItem('poidem:demo:v1') ?? '{"invites":[]}').invites)
-  expect(invites).toHaveLength(0)
+  await expect(page.getByRole('heading', { name: 'Этот план не найден' })).toBeVisible()
+  await expect(page.locator('.person-layout')).toHaveCount(0)
+  await page.goto('/match/old-match')
+  await expect(page.getByRole('heading', { name: 'Для встречи нужны двое' })).toBeVisible()
+  await expect(page.locator('.match-portraits')).toHaveCount(0)
+  await page.goto('/plans')
+  await expect(page.locator('.my-plan')).toHaveCount(0)
+  // Existing storage is preserved; only presentation of fictional entries is disabled.
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('poidem:demo:v1')!).invites)).toHaveLength(1)
 })
 
 test('inspiration prefills a plan, rejects missing and past dates, saves and survives reload', async ({ page }) => {
@@ -82,7 +77,7 @@ test('inspiration prefills a plan, rejects missing and past dates, saves and sur
   await page.getByRole('link', { name: 'Создать план здесь' }).first().click()
   await expect(page.getByRole('textbox', { name: 'Название плана' })).toHaveValue('Арт-свидание вдвоём')
   await page.getByRole('button', { name: 'Посмотреть план', exact: true }).click()
-  await expect(page.getByText('Выбери дату.', { exact: true })).toBeVisible()
+  await expect(page.getByText('Выбери дату', { exact: true })).toBeVisible()
   await page.locator('input[name=date]').fill('2020-01-01')
   await page.locator('input[name=time]').fill('18:30')
   await page.getByRole('button', { name: 'Посмотреть план', exact: true }).click()
@@ -99,13 +94,15 @@ test('inspiration prefills a plan, rejects missing and past dates, saves and sur
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Арт-свидание вдвоём', exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Посмотреть статус', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Твой план ждёт свою историю' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Черновик сохранён' })).toBeVisible()
 })
 
 test('navigation, all image assets, mobile and desktop layout', async ({ page }) => {
   test.setTimeout(120000)
   const errors: string[] = []
   page.on('pageerror', e => errors.push(e.message))
+  page.on('console', message => { if (message.type() === 'error' && !message.location().url.includes('kaspersky-labs.com')) errors.push(message.text()) })
+  await page.route('https://telegram.org/js/telegram-web-app.js', route => route.fulfill({ status: 200, body: '' }))
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     for (const route of ['/home', '/catalog', '/profile', '/create', '/plans', '/inspiration', '/people/demo-gallery']) {
@@ -140,7 +137,7 @@ test('corrupted local data recovers, reset clears demo profile', async ({ page }
   await page.getByRole('button', { name: 'Очистить данные', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Очистить', exact: true }).click()
   await page.reload()
-  await expect(page.getByText('Привет. Давай придумаем что-нибудь хорошее.')).toBeVisible()
+  await expect(page.getByText('Привет. Давай придумаем что-нибудь хорошее')).toBeVisible()
 })
 
 test('Telegram bridge adapts safe area, viewport and native back button without authentication', async ({ page }) => {
@@ -180,7 +177,7 @@ test('ordinary browser works when the Telegram SDK is unavailable', async ({ pag
   await page.goto('/home', { waitUntil: 'domcontentloaded' })
   await page.getByRole('link', { name: 'Найти свой план', exact: true }).click()
   await expect(page).toHaveURL('/catalog')
-  await expect(page.locator('.plan-card')).toHaveCount(6)
+  await expect(page.locator('.plan-card')).toHaveCount(0)
   expect(errors).toEqual([])
 })
 
@@ -203,4 +200,51 @@ test('a late Telegram SDK initializes after the interface is already visible', a
   releaseSdk()
   await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--app-height'))).toBe('777px')
   expect(await page.evaluate(() => (window as unknown as { __lateCalls: string[] }).__lateCalls)).toContain('ready')
+})
+
+test('compact home, editorial navigation, punctuation and mobile safe areas', async ({ page }) => {
+  await page.route('https://telegram.org/js/telegram-web-app.js', route => route.fulfill({ status: 200, body: '' }))
+  for (const viewport of [{ width: 320, height: 568 }, { width: 393, height: 852 }, { width: 360, height: 800 }]) {
+    await page.setViewportSize(viewport)
+    await page.goto('/home')
+    await expect(page.locator('main .hero-copy')).toHaveCount(1)
+    await expect(page.locator('main .plan-card, main .inspiration-card, main .hero-image, main .manifesto, main .home-shortcuts')).toHaveCount(0)
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty('--app-safe-top', '59px')
+      document.documentElement.style.setProperty('--app-safe-bottom', '34px')
+      document.documentElement.style.setProperty('--app-safe-left', '24px')
+      document.documentElement.style.setProperty('--app-safe-right', '28px')
+    })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
+    await page.screenshot({ path: test.info().outputPath(`home-safe-${viewport.width}x${viewport.height}.png`), fullPage: true })
+    const nav = page.getByRole('navigation', { name: 'Мобильная навигация' })
+    const plus = nav.getByRole('link', { name: 'Создать свой план' })
+    const navBox = (await nav.boundingBox())!
+    const plusBox = (await plus.boundingBox())!
+    const otherBox = (await nav.getByRole('link', { name: 'Главная', exact: true }).boundingBox())!
+    expect(plusBox.y).toBeLessThan(otherBox.y)
+    expect(plusBox.y + plusBox.height).toBeLessThanOrEqual(navBox.y + navBox.height - 34)
+    expect(plusBox.x + plusBox.width).toBeLessThanOrEqual(viewport.width - 28)
+    expect((await page.locator('.header-inner').boundingBox())!.y).toBeGreaterThanOrEqual(59)
+    await plus.click()
+    await expect(page).toHaveURL('/create')
+    const submit = page.getByRole('button', { name: 'Посмотреть план', exact: true })
+    await submit.scrollIntoViewIfNeeded()
+    const submitBox = (await submit.boundingBox())!
+    expect(submitBox.y + submitBox.height).toBeLessThanOrEqual((await nav.boundingBox())!.y)
+    await nav.getByRole('link', { name: 'Вдохновение', exact: true }).click()
+    await expect(page.locator('.inspiration-card')).toHaveCount(3)
+    await expect(page.getByRole('link', { name: 'Все планы', exact: true })).toHaveCount(0)
+    await expect(page.locator('.inspiration-photo .photo-arrow').first()).toHaveCSS('color', 'rgb(184, 228, 255)')
+    await page.getByRole('link', { name: /^Создать план:/ }).first().click()
+    await expect(page).toHaveURL('/create?idea=art-evening')
+    await page.goto('/profile')
+    await expect(page.getByText('Без лишнего', { exact: false })).toHaveCount(0)
+  }
+  for (const route of ['/', '/home', '/profile', '/catalog', '/create', '/plans', '/inspiration', '/people/missing', '/match/missing']) {
+    await page.goto(route)
+    const trailing = await page.locator('h1, h2, h3, p, .eyebrow, .hero-footnote, .heading-description, .form-disclaimer, .small-note').evaluateAll(elements =>
+      elements.map(el => el.textContent?.trim()).filter(text => text && /[А-Яа-яЁё].*\.$/s.test(text)))
+    expect(trailing, route).toEqual([])
+  }
 })
