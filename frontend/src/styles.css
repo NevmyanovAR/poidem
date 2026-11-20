@@ -94,7 +94,10 @@ main:focus { outline: none; }
 
 /* Home */
 .home-hero { display: grid; grid-template-columns: .96fr 1fr; align-items: center; gap: 70px; padding: 37px 0 40px; }
-.home-hero-compact { grid-template-columns: 1fr; }
+.home-hero-compact { grid-template-columns: 1fr; position: relative; }
+.home-atmosphere { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.home-atmosphere > img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 55%; filter: blur(2px); transform: scale(1.025); }
+.home-atmosphere::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--wine) 94%, transparent), color-mix(in srgb, var(--wine) 40%, transparent)), linear-gradient(0deg, var(--wine), transparent 35%, color-mix(in srgb, var(--wine) 20%, transparent)); }
 .home-hero-compact .hero-copy { max-width: 680px; }
 .hero-copy { container-type: inline-size; padding: 20px 0; position: relative; }
 .hero-copy > .eyebrow { font-size: 9px; display: flex; align-items: center; gap: 10px; letter-spacing: .13em; color: var(--muted); }
@@ -102,7 +105,7 @@ main:focus { outline: none; }
 .greeting { font-size: 11px; color: var(--muted); margin: 30px 0 15px; }
 .hero-copy h1 { font-size: min(clamp(90px, 9.5vw, 140px), 23cqw); line-height: .77; letter-spacing: -.055em; position: relative; width: fit-content; }
 .hero-copy h1 em { line-height: 1.1; }
-.title-star { font-family: Georgia, serif; font-size: 46px; color: var(--sky); position: absolute; right: -55px; top: -8px; transform: rotate(12deg); font-weight: 400; }
+.title-star { width: 1em; height: 1em; font-size: 46px; color: var(--sky); position: absolute; right: -55px; top: -8px; transform: rotate(12deg); }
 .hero-description { margin-top: 21px; font-size: 13px; color: var(--muted); line-height: 1.9; }
 .hero-copy .button { margin-top: 25px; min-width: 210px; }
 .hero-footnote { display: flex; align-items: center; gap: 9px; margin-top: 15px; font-size: 9px; color: var(--muted); }
@@ -582,6 +585,8 @@ input[type='time']::-webkit-calendar-picker-indicator {
   .heading-with-action .page-heading h1 em { line-height: .65; }
 }
 @media (max-width: 430px) {
+  .match-heading { display: flex; flex-direction: column; align-items: center; }
+  .match-heading > .brand-glasses { position: static; order: -1; width: 68px; height: auto; margin-bottom: 18px; }
   .form-page:not(.profile-page) > .form-intro h1 em {
     display: block;
     line-height: .65;
