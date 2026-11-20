@@ -86,6 +86,18 @@ test('home atmosphere and monochrome SVG preserve the plan-search action', async
     await expect(page.locator('.hero-copy')).toHaveCSS('filter', 'none')
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
     await page.screenshot({ path: join(captureRoot, `home-${width}.png`), fullPage: true, animations: 'disabled' })
+    if (width <= 430) {
+      await page.setViewportSize({ width, height: 600 })
+      const layer = page.locator('.home-atmosphere')
+      const image = page.locator('.home-atmosphere > img')
+      const layerBefore = await layer.boundingBox()
+      const imageBefore = await image.boundingBox()
+      await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }))
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+      expect(await layer.boundingBox()).toEqual(layerBefore)
+      expect(await image.boundingBox()).toEqual(imageBefore)
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+    }
     await page.getByRole('link', { name: 'Найти свой план', exact: true }).click()
     await expect(page).toHaveURL('/catalog')
     await expect(page.locator('.home-atmosphere')).toHaveCount(0)

@@ -95,7 +95,7 @@ main:focus { outline: none; }
 /* Home */
 .home-hero { display: grid; grid-template-columns: .96fr 1fr; align-items: center; gap: 70px; padding: 37px 0 40px; }
 .home-hero-compact { grid-template-columns: 1fr; position: relative; }
-.home-atmosphere { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.home-atmosphere { position: fixed; inset: 0 0 auto; height: 100vh; height: 100lvh; z-index: -1; overflow: hidden; pointer-events: none; }
 .home-atmosphere > img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 55%; filter: blur(2px); transform: scale(1.025); }
 .home-atmosphere::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--wine) 94%, transparent), color-mix(in srgb, var(--wine) 40%, transparent)), linear-gradient(0deg, var(--wine), transparent 35%, color-mix(in srgb, var(--wine) 20%, transparent)); }
 .home-hero-compact .hero-copy { max-width: 680px; }
