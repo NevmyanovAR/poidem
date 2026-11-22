@@ -1,3 +1,4 @@
+import { fillProfileBasics } from './helpers/profile'
 import { expect, test } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 
@@ -57,11 +58,12 @@ test('approved palette across routes, both profile steps and interaction states'
     await page.getByRole('button', { name: 'Продолжить', exact: true }).click()
     await checkColors(page)
     await expect(page.locator('.field-error').first()).toHaveCSS('color', light)
-    await page.getByRole('button', { name: 'Заполнить примером' }).click()
+    await fillProfileBasics(page)
     await page.getByRole('button', { name: 'Продолжить', exact: true }).click()
-    await checkColors(page)
+    await page.getByRole('button', { name: 'Кофе', exact: true }).click()
     await expect(page.locator('button.chip.selected').first()).toHaveCSS('background-color', light)
     await expect(page.locator('button.chip.selected').first()).toHaveCSS('color', wine)
+    await checkColors(page)
     const primary = page.getByRole('button', { name: 'Сохранить анкету' })
     // Move the pointer away before checking the default state on desktop.
     await page.mouse.move(0, 0)
@@ -103,7 +105,7 @@ test('static assets use only approved colors; authored small-text pairs meet con
   }
 })
 
-test('mobile production flow works with no SDK, initData or backend and survives deep-link reloads', async ({ page }) => {
+test('mobile browser without SDK keeps only temporary drafts and reloads deep links safely', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const errors: string[] = []
   const serviceRequests: string[] = []
@@ -127,14 +129,14 @@ test('mobile production flow works with no SDK, initData or backend and survives
   await page.locator('input[name=time]').fill('18:30')
   await page.getByRole('button', { name: 'Посмотреть план', exact: true }).click()
   await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
-  await page.reload()
   await expect(page.locator('.my-plan')).toHaveCount(1)
   await expect(page.getByText('Черновик', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Кофе в 18.30', exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Посмотреть статус', exact: true }).click()
-  await page.reload()
   await expect(page.getByRole('heading', { name: 'Черновик сохранён' })).toBeVisible()
-  await page.getByRole('link', { name: 'Все планы', exact: true }).click()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Этот план не найден', exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Выбрать другой', exact: true }).click()
   await expect(page.locator('.plan-card')).toHaveCount(0)
   expect(serviceRequests).toEqual([])
   expect(errors).toEqual([])

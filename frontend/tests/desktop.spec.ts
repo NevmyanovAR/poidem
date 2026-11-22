@@ -1,3 +1,4 @@
+import { fillProfileBasics } from './helpers/profile'
 import { expect, test } from '@playwright/test'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -73,15 +74,16 @@ test('desktop welcome and registration adapt while mobile composition stays avai
       const form = (await page.locator('.profile-page > .form-panel').boundingBox())!
       expect(image.x + image.width).toBeLessThanOrEqual(form.x)
       expect(image.height).toBeGreaterThanOrEqual(450)
+      expect((await page.locator('.profile-authorization').boundingBox())!.x).toBe(form.x)
       if (viewport.width >= 1366) expect(image.width / viewport.width).toBeGreaterThan(.4)
       await expect(page.locator('.profile-editorial > img')).toHaveCount(1)
     }
-    await page.getByRole('button', { name: 'Заполнить примером', exact: true }).click()
+    await fillProfileBasics(page)
     await page.getByRole('button', { name: 'Продолжить', exact: true }).click()
     await capture(page, 'profile-step2-' + suffix)
-    await expect(page.getByRole('button', { name: 'Сохранить анкету', exact: true })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Сохранить анкету', exact: true })).toBeDisabled()
     await page.getByRole('button', { name: 'Назад', exact: true }).click()
-    await expect(page.getByRole('textbox', { name: 'Твоё имя' })).toHaveValue('Маша')
+    await expect(page.getByRole('textbox', { name: 'Твоё имя' })).toHaveValue('Проверка формы')
     await page.goto('/home')
     await page.evaluate(() => localStorage.clear())
   }

@@ -1,6 +1,6 @@
 import { ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { INSPIRATION } from '../data/demo'
+import { INSPIRATION } from '../data/editorial'
 import { PageHeading, Photo } from '../components/ui'
 
 export function Inspiration() {

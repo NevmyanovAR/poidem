@@ -1,10 +1,10 @@
 import { ArrowUpRight, Asterisk, Heart } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useDemo } from '../state/context'
+import { useAppData } from '../state/context'
 import { Photo } from '../components/ui'
 
 export function Home() {
-  const { data } = useDemo()
+  const { data } = useAppData()
   return <section className="home-hero home-hero-compact"><div className="home-atmosphere" aria-hidden="true"><Photo src="/images/hands-cinema.jpg" alt="" eager /></div><div className="hero-copy">
     <span className="eyebrow"><span className="tiny-line" /> Для встреч, которые хочется вспоминать</span>
     <p className="greeting">{data.profile ? `${data.profile.name}, какой у тебя план?` : 'Привет. Давай придумаем что-нибудь хорошее'}</p>

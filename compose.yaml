@@ -1,0 +1,109 @@
+name: poidem
+
+x-database: &database
+  image: postgres:17
+  environment: &database-environment
+    POSTGRES_USER: poidem_admin
+    POSTGRES_DB: poidem
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/Initialize-LocalEnvironment.ps1 first}
+    POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD}
+    POSTGRES_MIGRATION_PASSWORD: ${POSTGRES_MIGRATION_PASSWORD:?Set POSTGRES_MIGRATION_PASSWORD}
+  healthcheck:
+    test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+    interval: 3s
+    timeout: 3s
+    retries: 20
+    start_period: 10s
+
+x-runtime-environment: &runtime-environment
+  APP_ENV: ${APP_ENV:-development}
+  DATABASE_URL: postgresql+psycopg://poidem_app:${POSTGRES_APP_PASSWORD}@db:5432/poidem
+  CORS_ORIGINS: ${CORS_ORIGINS:-["http://127.0.0.1:5173","http://localhost:5173","http://127.0.0.1:4173","http://localhost:4173"]}
+  TRUSTED_HOSTS: ${TRUSTED_HOSTS:-["127.0.0.1","localhost"]}
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  MINI_APP_URL: ${MINI_APP_URL:-}
+  API_PUBLIC_URL: ${API_PUBLIC_URL:-}
+  INIT_DATA_MAX_AGE_SECONDS: ${INIT_DATA_MAX_AGE_SECONDS:-300}
+  AUTH_CLOCK_SKEW_SECONDS: ${AUTH_CLOCK_SKEW_SECONDS:-30}
+  SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-86400}
+  SESSION_COOKIE_SAMESITE: ${SESSION_COOKIE_SAMESITE:-lax}
+  SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-}
+  MEDIA_ROOT: /app/uploads/profiles
+  PHOTO_MAX_BYTES: ${PHOTO_MAX_BYTES:-3145728}
+  PHOTO_MAX_PIXELS: ${PHOTO_MAX_PIXELS:-16000000}
+  PHOTO_MAX_EDGE: ${PHOTO_MAX_EDGE:-2048}
+  LOGIN_REQUESTS_PER_MINUTE: ${LOGIN_REQUESTS_PER_MINUTE:-30}
+  PHOTO_REQUESTS_PER_MINUTE: ${PHOTO_REQUESTS_PER_MINUTE:-10}
+  DB_CONNECT_TIMEOUT_SECONDS: ${DB_CONNECT_TIMEOUT_SECONDS:-5}
+  DB_STATEMENT_TIMEOUT_MS: ${DB_STATEMENT_TIMEOUT_MS:-5000}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+x-backend-build: &backend-build
+  context: ./backend
+  target: runtime
+
+services:
+  db:
+    <<: *database
+    ports: ["127.0.0.1:${POSTGRES_PORT:-5432}:5432"]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./backend/docker/postgres-init.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
+
+  db-test:
+    <<: *database
+    profiles: [test]
+    environment:
+      <<: *database-environment
+      POSTGRES_DB: poidem_test
+    ports: ["127.0.0.1:${POSTGRES_TEST_PORT:-5433}:5432"]
+    # Тестовые данные исчезают с контейнером, рабочий volume не используется.
+    tmpfs: [/var/lib/postgresql/data]
+    volumes:
+      - ./backend/docker/postgres-init.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
+
+  api:
+    profiles: [app]
+    build: *backend-build
+    environment: *runtime-environment
+    volumes:
+      - private-media:/app/uploads
+    ports: ["127.0.0.1:${BACKEND_PORT:-8001}:8001"]
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -c, "import json,os,urllib.request; req=urllib.request.Request('http://127.0.0.1:8001/health',headers={'Host':json.loads(os.environ['TRUSTED_HOSTS'])[0]}); urllib.request.urlopen(req,timeout=8)"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  migrate:
+    profiles: [tools]
+    build: *backend-build
+    environment:
+      <<: *runtime-environment
+      TELEGRAM_BOT_TOKEN: ""
+      MIGRATION_DATABASE_URL: postgresql+psycopg://poidem_migrator:${POSTGRES_MIGRATION_PASSWORD}@db:5432/poidem
+    depends_on:
+      db: {condition: service_healthy}
+    command: [python, -m, alembic, -c, backend/alembic.ini, upgrade, head]
+
+  test:
+    profiles: [test]
+    build:
+      context: ./backend
+      target: test
+    environment:
+      <<: *runtime-environment
+      APP_ENV: testing
+      TELEGRAM_BOT_TOKEN: ""
+      DATABASE_URL_TEST: postgresql+psycopg://poidem_app:${POSTGRES_APP_PASSWORD}@db-test:5432/poidem_test
+      MIGRATION_DATABASE_URL_TEST: postgresql+psycopg://poidem_migrator:${POSTGRES_MIGRATION_PASSWORD}@db-test:5432/poidem_test
+    depends_on:
+      db-test: {condition: service_healthy}
+    command: [python, -m, pytest, -p, "no:cacheprovider", -c, backend/pyproject.toml, backend/tests]
+
+volumes:
+  postgres-data:
+  private-media:

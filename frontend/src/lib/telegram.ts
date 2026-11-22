@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 
 interface Insets { top: number; bottom: number; left: number; right: number }
 interface TelegramWebApp {
+  initData?: string
   platform: string
   viewportStableHeight: number
   safeAreaInset?: Insets
@@ -19,6 +20,17 @@ interface TelegramWebApp {
 }
 declare global { interface Window { Telegram?: { WebApp?: TelegramWebApp } } }
 
+export function getTelegramInitData(): string {
+  const raw = window.Telegram?.WebApp?.initData
+  if (typeof raw === 'string') return raw
+  // Официальный SDK берёт initData из этого же параметра запуска.
+  // Не ждём его загрузки по сети; строка не пересобирается и проверяется API.
+  // Не сохраняем её в storage и не используем клиентские поля как авторизацию.
+  const hash = window.location.hash.slice(1)
+  const params = new URLSearchParams(hash.slice(hash.indexOf('?') + 1))
+  return params.getAll('tgWebAppData').length === 1 ? params.get('tgWebAppData') ?? '' : ''
+}
+
 function observeTelegram(setup: (app: TelegramWebApp) => (() => void) | void) {
   let cleanup: (() => void) | void
   const ready = () => {
@@ -34,7 +46,7 @@ function observeTelegram(setup: (app: TelegramWebApp) => (() => void) | void) {
 export function useTelegram() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  // A delayed or unavailable external SDK must not block the browser demo.
+  // A delayed or unavailable external SDK must not block the browser interface.
   // The presence of this bridge is never treated as authentication.
   useEffect(() => observeTelegram(app => {
     app.ready()

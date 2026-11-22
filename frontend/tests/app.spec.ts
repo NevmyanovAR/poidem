@@ -1,43 +1,41 @@
+import { fillProfileBasics } from './helpers/profile'
 import { test, expect } from '@playwright/test'
 import { fileURLToPath } from 'node:url'
 
-test('welcome, age gate, exactly three interests and profile persistence', async ({ page }) => {
+test('registration validates adult age and interests without offering a fake account', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: /Всё начинается/ })).toBeVisible()
   await page.getByRole('link', { name: 'Начать знакомство' }).click()
   await page.getByRole('button', { name: 'Продолжить', exact: true }).click()
   await expect(page.getByText('Укажи имя: от 1 до 40 символов')).toBeVisible()
-  await page.getByRole('button', { name: 'Заполнить примером' }).click()
+  await fillProfileBasics(page)
   await page.getByRole('spinbutton', { name: 'Возраст' }).fill('17')
   await page.getByRole('button', { name: 'Продолжить', exact: true }).click()
   await expect(page.getByText('Знакомиться здесь можно только с 18 лет')).toBeVisible()
   await page.getByRole('spinbutton', { name: 'Возраст' }).fill('24')
   await page.getByRole('button', { name: 'Продолжить', exact: true }).click()
-  await page.getByRole('button', { name: 'Кофе', exact: true }).click()
-  await page.getByRole('button', { name: 'Сохранить анкету' }).click()
-  await expect(page.getByText('Выбери ровно три интереса')).toBeVisible()
-  await page.getByRole('button', { name: 'Кофе', exact: true }).click()
+  for (const interest of ['Искусство', 'Кофе', 'Прогулки']) await page.getByRole('button', { name: interest, exact: true }).click()
   await page.getByRole('button', { name: 'Кино', exact: true }).click()
   await expect(page.getByText('Уже выбрано три.', { exact: false })).toBeVisible()
-  await page.getByRole('button', { name: 'Сохранить анкету' }).click()
-  await expect(page).toHaveURL('/home')
+  await expect(page.locator('button.chip.selected')).toHaveCount(3)
+  await expect(page.getByRole('button', { name: 'Сохранить анкету' })).toBeDisabled()
+  await expect(page.getByText('Для сохранения анкеты нужен вход через Telegram')).toBeVisible()
   await page.reload()
-  await expect(page.getByText('Маша, какой у тебя план?')).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Твоё имя' })).toHaveValue('')
 })
 
 test('photo upload validation and actual image preview', async ({ page }) => {
   await page.goto('/profile')
-  await page.getByRole('button', { name: 'Заполнить примером' }).click()
+  await fillProfileBasics(page)
   await page.getByRole('button', { name: 'Продолжить', exact: true }).click()
   await page.locator('input[type=file]').setInputFiles({ name: 'fake.txt', mimeType: 'text/plain', buffer: Buffer.from('not an image') })
   await expect(page.getByText('Подойдёт JPG, PNG или WebP')).toBeVisible()
   await page.locator('input[type=file]').setInputFiles(fileURLToPath(new URL('../public/images/portrait-sasha.jpeg', import.meta.url)))
   await expect(page.getByRole('img', { name: 'Предпросмотр твоей фотографии' })).toHaveAttribute('src', /^data:image\/jpeg/)
-  await page.getByRole('button', { name: 'Сохранить анкету' }).click()
+  await expect(page.getByRole('button', { name: 'Сохранить анкету' })).toBeDisabled()
   await page.reload()
-  await page.getByRole('link', { name: 'Моя анкета' }).click()
+  await fillProfileBasics(page)
   await page.getByRole('button', { name: 'Продолжить', exact: true }).click()
-  await expect(page.getByRole('img', { name: 'Предпросмотр твоей фотографии' })).toHaveAttribute('src', /^data:image\/jpeg/)
+  await expect(page.getByRole('img', { name: 'Предпросмотр твоей фотографии' })).toHaveCount(0)
 })
 
 test('catalog only lists publications and never substitutes editorial fixtures', async ({ page }) => {
@@ -66,11 +64,11 @@ test('old fixture deep links and stored invitations do not expose fictional user
   await expect(page.locator('.match-portraits')).toHaveCount(0)
   await page.goto('/plans')
   await expect(page.locator('.my-plan')).toHaveCount(0)
-  // Existing storage is preserved; only presentation of fictional entries is disabled.
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('poidem:demo:v1')!).invites)).toHaveLength(1)
+  // Старый обычный профиль не импортируется; его очистка — явное действие.
+  expect(await page.evaluate(() => localStorage.getItem('poidem:demo:v1'))).not.toBeNull()
 })
 
-test('inspiration prefills a plan, rejects missing and past dates, saves and survives reload', async ({ page }) => {
+test('inspiration prefills a temporary plan, validates dates and does not persist real drafts', async ({ page }) => {
   await page.goto('/plans')
   await expect(page.getByRole('heading', { name: 'Здесь будет ваша история' })).toBeVisible()
   await page.goto('/inspiration')
@@ -91,10 +89,12 @@ test('inspiration prefills a plan, rejects missing and past dates, saves and sur
   await page.getByRole('button', { name: 'Посмотреть план', exact: true }).click()
   await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
   await expect(page).toHaveURL('/plans')
-  await page.reload()
   await expect(page.getByRole('heading', { name: 'Арт-свидание вдвоём', exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Посмотреть статус', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Черновик сохранён' })).toBeVisible()
+  await page.reload()
+  await page.goto('/plans')
+  await expect(page.getByRole('heading', { name: 'Здесь будет ваша история' })).toBeVisible()
 })
 
 test('navigation, all image assets, mobile and desktop layout', async ({ page }) => {
@@ -125,19 +125,17 @@ test('navigation, all image assets, mobile and desktop layout', async ({ page })
   expect(errors).toEqual([])
 })
 
-test('corrupted local data recovers, reset clears demo profile', async ({ page }) => {
+test('legacy corrupt data is ignored and explicit reset preserves the server-account boundary', async ({ page }) => {
   await page.goto('/home')
   await page.evaluate(() => localStorage.setItem('poidem:demo:v1', '{broken'))
   await page.reload()
   await expect(page.getByRole('heading', { name: /Куда/ })).toBeVisible()
-  await page.goto('/profile')
-  await page.getByRole('button', { name: 'Заполнить примером' }).click()
-  await page.getByRole('button', { name: 'Продолжить', exact: true }).click()
-  await page.getByRole('button', { name: 'Сохранить анкету' }).click()
+  expect(await page.evaluate(() => localStorage.getItem('poidem:demo:v1'))).toBe('{broken')
   await page.getByRole('button', { name: 'Очистить данные', exact: true }).click()
+  await expect(page.getByRole('dialog')).toContainText('Серверный аккаунт сохранится')
   await page.getByRole('dialog').getByRole('button', { name: 'Очистить', exact: true }).click()
-  await page.reload()
-  await expect(page.getByText('Привет. Давай придумаем что-нибудь хорошее')).toBeVisible()
+  expect(await page.evaluate(() => localStorage.getItem('poidem:demo:v1'))).toBeNull()
+  await expect(page.getByText('Черновики очищены. Серверный аккаунт сохранён', { exact: true })).toBeVisible()
 })
 
 test('Telegram bridge adapts safe area, viewport and native back button without authentication', async ({ page }) => {

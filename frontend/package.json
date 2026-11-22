@@ -14,7 +14,9 @@
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
     "test:e2e": "playwright test",
     "test:production": "playwright test --config playwright.production.config.ts",
-    "test:devices": "playwright test --config playwright.devices.config.ts"
+    "test:devices": "playwright test --config playwright.devices.config.ts",
+    "test:auth": "playwright test --config playwright.auth.config.ts",
+    "test:tunnel": "playwright test --config playwright.tunnel.config.ts"
   },
   "dependencies": {
     "@fontsource/bad-script": "^5.2.5",

@@ -1,5 +1,5 @@
 import { PLAN_LIMITS, PLAN_TEXT_RULES } from '../config/planRules'
-import type { DemoInvite, Plan } from '../types'
+import type { Plan } from '../types'
 
 const lookalikes: Record<string, string> = { a: 'а', c: 'с', e: 'е', o: 'о', p: 'р', x: 'х', y: 'у', k: 'к', m: 'м', t: 'т', b: 'в', h: 'н' }
 
@@ -37,12 +37,12 @@ export function creationQuota(plans: readonly Plan[], now = new Date()): Creatio
 }
 
 export interface ResponseCapacity { count: number; maximum: number; full: boolean; alreadyResponded: boolean }
-export function responseCapacity(planId: string, authorId: string, viewerId: string, invites: readonly DemoInvite[], seededIds: readonly string[] = []): ResponseCapacity {
+export function responseCapacity(planId: string, authorId: string, viewerId: string, responses: readonly { planId: string; responderId: string }[]): ResponseCapacity {
   // Count distinct people; status transitions never invent a quota-release policy.
-  const ids = new Set(seededIds)
-  for (const invite of invites) {
-    if (invite.planId !== planId) continue
-    ids.add(invite.responderId ?? (invite.direction === 'incoming' ? invite.personId : viewerId))
+  const ids = new Set<string>()
+  for (const response of responses) {
+    if (response.planId !== planId) continue
+    ids.add(response.responderId)
   }
   ids.delete(authorId)
   ids.delete('')

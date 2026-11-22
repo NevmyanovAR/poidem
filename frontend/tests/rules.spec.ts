@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { creationQuota, planTextErrors, responseCapacity } from '../src/lib/planRules'
-import type { DemoInvite, Plan } from '../src/types'
+import type { Plan } from '../src/types'
 
 const example = (id: string, createdAt?: string): Plan => ({ id, title: 'Кофе', category: 'Кофе и еда', date: '2026-12-01', time: '12:00', place: 'Кафе', description: '', image: '/images/gallery.jpeg', label: 'Черновик', own: true, createdAt })
 
@@ -23,16 +23,16 @@ test('harmless words and user input are preserved', () => {
 })
 
 test('response capacity excludes the author and deduplicates people across entries', () => {
-  const records: DemoInvite[] = [
+  const records = [
     { id: 'a', planId: 'p', personId: 'one', responderId: 'one', direction: 'incoming', status: 'waiting' },
     { id: 'b', planId: 'p', personId: 'one', responderId: 'one', direction: 'incoming', status: 'declined' },
     { id: 'c', planId: 'p', personId: 'author', responderId: 'author', direction: 'incoming', status: 'waiting' },
     { id: 'd', planId: 'other', personId: 'two', responderId: 'two', direction: 'incoming', status: 'waiting' },
   ]
   expect(responseCapacity('p', 'author', 'one', records)).toEqual({ count: 1, maximum: 15, full: false, alreadyResponded: true })
-  const seed = Array.from({ length: 14 }, (_, i) => 'visitor-' + i)
-  expect(responseCapacity('p', 'author', 'new-user', [], seed).full).toBe(false)
-  const full = responseCapacity('p', 'author', 'new-user', records, seed)
+  const records14 = Array.from({ length: 14 }, (_, i) => ({ planId: 'p', responderId: 'visitor-' + i }))
+  expect(responseCapacity('p', 'author', 'new-user', records14).full).toBe(false)
+  const full = responseCapacity('p', 'author', 'new-user', [...records, ...records14])
   expect(full.count).toBe(15)
   expect(full.full).toBe(true)
   expect(full.alreadyResponded).toBe(false)

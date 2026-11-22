@@ -39,6 +39,8 @@ backups/
 *.dump
 *.sql.gz
 pgdata/
+.local/
+.tools/
 
 # Local editor / OS files
 .idea/

@@ -2,6 +2,7 @@ import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests',
+  testIgnore: ['**/auth.spec.ts', '**/tunnel.spec.ts'],
   fullyParallel: true,
   forbidOnly: true,
   retries: 0,
