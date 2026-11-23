@@ -49,7 +49,7 @@ class Plan(IdentityMixin, CreatedMixin, Base):
     place: Mapped[str] = mapped_column(Text)
     description: Mapped[str] = mapped_column(Text)
     publication_status: Mapped[str] = mapped_column(
-        state_type("publication_status", "draft", "submitted", "published", "closed"),
+        state_type("publication_status", "draft", "submitted", "published", "closed", "cancelled"),
         server_default="draft",
     )
     moderation_status: Mapped[str] = mapped_column(

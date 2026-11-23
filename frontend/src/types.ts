@@ -43,7 +43,13 @@ export interface Plan {
   published?: boolean
   createdAt?: string
   moderation?: ModerationState
+  serverVersion?: number
+  publicationStatus?: 'draft' | 'submitted' | 'published' | 'closed' | 'cancelled'
+  startsAt?: string
+  timeZone?: string
 }
+
+export type PlanInput = Pick<Plan, 'title' | 'category' | 'date' | 'time' | 'place' | 'description'>
 
 // Only a verified server response may supply published plans and public author data.
 export interface PublishedPlan extends Plan {

@@ -6,6 +6,25 @@ import { tmpdir } from 'node:os'
 const widths = [320, 360, 375, 390, 430]
 const root = join(tmpdir(), 'poidem-final-mobile', 'after')
 
+test('live plan filter works at mobile widths without a submit and preserves readable layout', async ({ page }, testInfo) => {
+  await page.route('https://telegram.org/js/telegram-web-app.js', route => route.abort())
+  await page.goto('/create', { waitUntil: 'domcontentloaded' })
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 })
+    for (const [field, value] of [['title', 'хуй'], ['description', 'наркотики'], ['place', 'стриптиз']]) {
+      const input = page.locator(`form [name=${field}]`)
+      await input.fill(value)
+      await expect(input).toHaveAttribute('aria-invalid', 'true')
+      await expect(page.locator(`#error-${field}`)).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+      await input.fill('Кофе')
+      await expect(input).toHaveAttribute('aria-invalid', 'false')
+    }
+  }
+  await page.locator('[name=place]').fill('Закрытая крыша')
+  await page.screenshot({ path: testInfo.outputPath('live-plan-filter.png'), fullPage: true })
+})
+
 test('unavailable matches keep a safe empty state at mobile widths', async ({ page }) => {
   test.setTimeout(90000)
   for (const width of widths) {

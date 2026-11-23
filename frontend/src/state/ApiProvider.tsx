@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ApiClient, ApiError } from '../api/client'
 import { getTelegramInitData } from '../lib/telegram'
-import { creationQuota } from '../lib/planRules'
+import type { CreationQuota } from '../lib/planRules'
 import { emptyState } from './model'
 import { clearLegacyData } from '../lib/legacyStorage'
-import type { AuthorizationState, AppState, Profile } from '../types'
+import type { AuthorizationState, AppState, Profile, PublishedPlan } from '../types'
 import { AppContext } from './context'
+
+const unavailableQuota = (): CreationQuota => ({ maximum: 3, used: 0, remaining: 0, day: '', timeZone: 'Europe/Moscow', ready: false })
 
 export function ApiProvider({ children }: { children: ReactNode }) {
   const [client] = useState(() => new ApiClient())
@@ -14,12 +16,44 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   const [authorization, setAuthorization] = useState<AuthorizationState>({ status: 'checking' })
   const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState('')
+  const [publishedPlans, setPublishedPlans] = useState<PublishedPlan[]>([])
+  const [dailyQuota, setDailyQuota] = useState<CreationQuota>(unavailableQuota)
+  const [plansLoading, setPlansLoading] = useState(false)
+  const [plansError, setPlansError] = useState('')
+  const [planError, setPlanError] = useState('')
   const active = useRef(false)
   const closing = useRef(false)
   const autoAuthDisabled = useRef(false)
   const lastLaunch = useRef('')
   const authEpoch = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const refreshFlight = useRef<{ epoch: number; task: Promise<void> } | null>(null)
+  const refreshPlans = useCallback((epoch = authEpoch.current): Promise<void> => {
+    if (!client.hasSession || closing.current) return Promise.resolve()
+    if (refreshFlight.current?.epoch === epoch) return refreshFlight.current.task
+    const task = (async () => {
+      setPlansLoading(true); setPlansError('')
+      try {
+        const [own, catalogue, quota] = await Promise.all([client.plans(true), client.plans(false), client.quota()])
+        if (!active.current || closing.current || epoch !== authEpoch.current) return
+        setData(current => ({ ...current, ownPlans: own }))
+        setPublishedPlans(catalogue.filter(plan => !plan.own && plan.author.id !== client.userId && plan.publicationStatus === 'published' && ['not_submitted', 'approved'].includes(plan.moderation?.status ?? '')))
+        setDailyQuota(quota)
+      } catch (error) {
+        if (!active.current || closing.current || epoch !== authEpoch.current) return
+        setPlansError(error instanceof Error ? error.message : 'Не удалось загрузить планы')
+        setPublishedPlans([])
+        setDailyQuota(unavailableQuota())
+        if (error instanceof ApiError && error.status === 401) {
+          setData(emptyState()); setPublishedPlans([]); setAuthorization({ status: 'unverified' })
+        }
+      } finally { if (active.current && epoch === authEpoch.current) setPlansLoading(false) }
+    })()
+    refreshFlight.current = { epoch, task }
+    const clear = () => { if (refreshFlight.current?.task === task) refreshFlight.current = null }
+    void task.then(clear, clear)
+    return task
+  }, [client])
   function notify(text: string) {
     clearTimeout(timer.current); setToast(text)
     timer.current = setTimeout(() => setToast(''), 4500)
@@ -27,7 +61,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   function report(error: unknown) {
     if (!active.current || closing.current) return
     if (error instanceof ApiError && error.status === 401) {
-      setData(emptyState()); setAuthorization({ status: 'unverified' })
+      setData(emptyState()); setPublishedPlans([]); setDailyQuota(unavailableQuota()); setAuthorization({ status: 'unverified' })
     }
     notify(error instanceof Error ? error.message : 'Не удалось выполнить запрос')
   }
@@ -39,6 +73,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
     lastLaunch.current = raw
     const epoch = ++authEpoch.current
     setData(emptyState())
+    setPublishedPlans([]); setDailyQuota(unavailableQuota()); setPlansError(''); setPlanError('')
     setAuthorization({ status: 'checking' })
     try {
       const result = await client.authenticate(() => raw)
@@ -47,6 +82,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
       setAuthorization(result
         ? { status: 'verified', userId: result.user.id, verifiedAt: result.authorization.verified_at }
         : { status: 'unverified' })
+      if (result) void refreshPlans(epoch)
     } catch (error) {
       if (!active.current || closing.current || epoch !== authEpoch.current) return
       setData(emptyState())
@@ -65,11 +101,38 @@ export function ApiProvider({ children }: { children: ReactNode }) {
     }
     // authenticate замкнут на один client; данные не берутся из localStorage.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client])
+  }, [client, refreshPlans])
+
+  async function writePlan(operation: () => Promise<PublishedPlan>, message: string): Promise<boolean> {
+    if (authorization.status !== 'verified' || busy || closing.current) {
+      setPlanError('Сначала войди через Telegram и сохрани анкету'); return false
+    }
+    const epoch = authEpoch.current
+    setBusy(true); setPlanError('')
+    try {
+      const saved = await operation()
+      if (!active.current || closing.current || epoch !== authEpoch.current) return false
+      setData(current => ({ ...current, ownPlans: [saved, ...current.ownPlans.filter(plan => plan.id !== saved.id)] }))
+      setDailyQuota(unavailableQuota())
+      if (refreshFlight.current?.epoch === epoch) await refreshFlight.current.task
+      await refreshPlans(epoch)
+      if (epoch !== authEpoch.current || closing.current || !active.current) return false
+      notify(message); return true
+    } catch (error) {
+      if (epoch === authEpoch.current && active.current && !closing.current) {
+        setPlanError(error instanceof Error ? error.message : 'Не удалось сохранить план')
+        report(error)
+        if (refreshFlight.current?.epoch === epoch) await refreshFlight.current.task
+        await refreshPlans(epoch)
+      }
+      return false
+    } finally { if (active.current) setBusy(false) }
+  }
 
   return <AppContext.Provider value={{
-    data, plans: data.ownPlans, publishedPlans: [],
-    authorization, busy, dailyQuota: creationQuota(data.ownPlans),
+    data, plans: data.ownPlans, publishedPlans,
+    authorization, busy, dailyQuota, plansLoading, plansError, planError,
+    refreshPlans,
     toast, notify, async retryAuthorization() { autoAuthDisabled.current = false; await authenticate(true) },
     async saveProfile(profile: Profile, file?: File | null) {
       if (authorization.status !== 'verified' || busy || closing.current) { notify('Сначала войди через Telegram'); return false }
@@ -95,7 +158,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
         }
         const result = await client.deleteAccount(expectedUserId)
         if (!active.current) return false
-        setData(emptyState()); setAuthorization({ status: 'unverified' })
+        setData(emptyState()); setPublishedPlans([]); setDailyQuota(unavailableQuota()); setAuthorization({ status: 'unverified' })
         autoAuthDisabled.current = true
         clearLegacyData(true)
         notify(result.media_cleanup_pending ? 'Аккаунт удалён. Очистка файлов будет повторена сервером' : 'Аккаунт и фотографии удалены')
@@ -103,15 +166,13 @@ export function ApiProvider({ children }: { children: ReactNode }) {
       } catch (error) { closing.current = false; report(error); return false }
       finally { closing.current = false; if (active.current) setBusy(false) }
     },
-    createPlan(plan) {
-      // До API планов — только временный непубликуемый черновик, без localStorage.
-      setData(current => ({ ...current, ownPlans: [...current.ownPlans, { ...plan, published: false }] }))
-      notify('Черновик сохранён до перезагрузки. Публикация пока не подключена'); return true
-    },
+    createPlan: (plan, key) => writePlan(() => client.createPlan(plan, key), 'План сохранён на сервере'),
+    editPlan: (plan, fields) => writePlan(() => client.editPlan(plan, fields), 'Изменения сохранены'),
+    publishPlan: plan => writePlan(() => client.planCommand(plan, 'publish'), 'План опубликован'),
+    cancelPlan: plan => writePlan(() => client.planCommand(plan, 'cancel'), 'План отменён'),
     reset() {
       clearLegacyData(true)
-      notify('Черновики очищены. Серверный аккаунт сохранён')
-      setData(current => ({ ...emptyState(), profile: current.profile }))
+      notify('Данные на устройстве очищены. Серверные анкета и планы сохранены')
     },
   }}>{children}</AppContext.Provider>
 }

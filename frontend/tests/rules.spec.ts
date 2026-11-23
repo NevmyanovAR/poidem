@@ -1,8 +1,22 @@
 import { expect, test } from '@playwright/test'
 import { creationQuota, planTextErrors, responseCapacity } from '../src/lib/planRules'
 import type { Plan } from '../src/types'
+import cases from '../../backend/tests/fixtures/content_cases.json' with { type: 'json' }
+import policy from '../src/config/contentPolicy.generated.json' with { type: 'json' }
+import { contentError } from '../src/lib/contentFilter'
 
 const example = (id: string, createdAt?: string): Plan => ({ id, title: 'Кофе', category: 'Кофе и еда', date: '2026-12-01', time: '12:00', place: 'Кафе', description: '', image: '/images/gallery.jpeg', label: 'Черновик', own: true, createdAt })
+
+test('client uses the shared server corpus, including neutral discussion and forbidden locations', () => {
+  for (const sample of cases) expect(!contentError(sample.text), sample.text).toBe(sample.allowed)
+})
+
+test('every exported profanity form is recognized locally in all three plan fields', () => {
+  for (const word of [...policy.russian, ...policy.english]) expect(contentError(word), word).toBeTruthy()
+  for (const field of ['title', 'description', 'place'] as const) {
+    expect(planTextErrors({ title: 'Кофе', description: '', place: 'Музей', [field]: 'хуй' })[field]).toBeTruthy()
+  }
+})
 
 test('forbidden venue topics recognize case, punctuation, spaces and simple spellings', () => {
   for (const title of ['СТРИП-КЛУБ', 'В стрип   клубе', 'В стриптиз-клуб', 'с т р и п к л у б', 'cтpип клyб', 'Strip Club', 'stripclub', 'ЗАБРОШКИ', 'зaброшкa', 'заброшенные здания', 'в заброшенном сооружении', 'заброшенный завод', 'abandoned building']) {

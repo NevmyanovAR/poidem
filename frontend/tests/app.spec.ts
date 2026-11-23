@@ -40,14 +40,14 @@ test('photo upload validation and actual image preview', async ({ page }) => {
 
 test('catalog only lists publications and never substitutes editorial fixtures', async ({ page }) => {
   await page.goto('/catalog')
-  await expect(page.getByRole('heading', { name: 'Пока нет опубликованных планов' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Войди, чтобы увидеть планы' })).toBeVisible()
   await expect(page.locator('.plan-card')).toHaveCount(0)
   await page.getByRole('button', { name: 'Прогулки', exact: true }).click()
   await expect(page.locator('.plan-card')).toHaveCount(0)
   await page.reload()
   await expect(page.getByRole('button', { name: 'Прогулки', exact: true })).toHaveAttribute('aria-pressed', 'true')
-  await page.getByRole('link', { name: 'Создать первый план', exact: true }).click()
-  await expect(page).toHaveURL('/create')
+  await page.locator('.empty-state').getByRole('link', { name: 'Моя анкета', exact: true }).click()
+  await expect(page).toHaveURL('/profile')
 })
 
 test('old fixture deep links and stored invitations do not expose fictional users or matches', async ({ page }) => {
@@ -57,7 +57,7 @@ test('old fixture deep links and stored invitations do not expose fictional user
     invites: [{ id: 'old-match', planId: 'demo-gallery', personId: 'demo-sasha', status: 'matched' }],
   })))
   await page.goto('/people/demo-gallery')
-  await expect(page.getByRole('heading', { name: 'Этот план не найден' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Войди, чтобы открыть план' })).toBeVisible()
   await expect(page.locator('.person-layout')).toHaveCount(0)
   await page.goto('/match/old-match')
   await expect(page.getByRole('heading', { name: 'Для встречи нужны двое' })).toBeVisible()
@@ -68,9 +68,9 @@ test('old fixture deep links and stored invitations do not expose fictional user
   expect(await page.evaluate(() => localStorage.getItem('poidem:demo:v1'))).not.toBeNull()
 })
 
-test('inspiration prefills a temporary plan, validates dates and does not persist real drafts', async ({ page }) => {
+test('inspiration prefills a plan and validates dates without saving outside authentication', async ({ page }) => {
   await page.goto('/plans')
-  await expect(page.getByRole('heading', { name: 'Здесь будет ваша история' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Войди, чтобы увидеть свои планы' })).toBeVisible()
   await page.goto('/inspiration')
   await page.getByRole('link', { name: 'Создать план здесь' }).first().click()
   await expect(page.getByRole('textbox', { name: 'Название плана' })).toHaveValue('Арт-свидание вдвоём')
@@ -87,14 +87,10 @@ test('inspiration prefills a temporary plan, validates dates and does not persis
   await page.getByRole('button', { name: 'Изменить', exact: true }).click()
   await expect(page.locator('input[name=date]')).toHaveValue(tomorrow)
   await page.getByRole('button', { name: 'Посмотреть план', exact: true }).click()
-  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
-  await expect(page).toHaveURL('/plans')
-  await expect(page.getByRole('heading', { name: 'Арт-свидание вдвоём', exact: true })).toBeVisible()
-  await page.getByRole('link', { name: 'Посмотреть статус', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Черновик сохранён' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Сохранить план', exact: true })).toBeDisabled()
   await page.reload()
   await page.goto('/plans')
-  await expect(page.getByRole('heading', { name: 'Здесь будет ваша история' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Войди, чтобы увидеть свои планы' })).toBeVisible()
 })
 
 test('navigation, all image assets, mobile and desktop layout', async ({ page }) => {
@@ -132,10 +128,10 @@ test('legacy corrupt data is ignored and explicit reset preserves the server-acc
   await expect(page.getByRole('heading', { name: /Куда/ })).toBeVisible()
   expect(await page.evaluate(() => localStorage.getItem('poidem:demo:v1'))).toBe('{broken')
   await page.getByRole('button', { name: 'Очистить данные', exact: true }).click()
-  await expect(page.getByRole('dialog')).toContainText('Серверный аккаунт сохранится')
+  await expect(page.getByRole('dialog')).toContainText('Серверные анкета и планы сохранятся')
   await page.getByRole('dialog').getByRole('button', { name: 'Очистить', exact: true }).click()
   expect(await page.evaluate(() => localStorage.getItem('poidem:demo:v1'))).toBeNull()
-  await expect(page.getByText('Черновики очищены. Серверный аккаунт сохранён', { exact: true })).toBeVisible()
+  await expect(page.getByText('Данные на устройстве очищены. Серверные анкета и планы сохранены', { exact: true })).toBeVisible()
 })
 
 test('Telegram bridge adapts safe area, viewport and native back button without authentication', async ({ page }) => {

@@ -17,6 +17,7 @@ dependencies = [
   "psycopg[binary]>=3.2.4,<4",
   "Pillow>=12,<14",
   "python-multipart>=0.0.20,<1",
+  "tzdata>=2026.6",
 ]
 
 [project.optional-dependencies]

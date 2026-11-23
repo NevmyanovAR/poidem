@@ -17,13 +17,14 @@ class AppError(Exception):
     code: str
     message: str
     fields: dict[str, str] = field(default_factory=dict)
+    retry_after: int | None = None
 
 
 def error_response(request: Request, error: AppError) -> JSONResponse:
     request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
     headers = {"X-Request-ID": request_id, "Cache-Control": "no-store"}
     if error.status_code == 429:
-        headers["Retry-After"] = "60"
+        headers["Retry-After"] = str(error.retry_after or 60)
     return JSONResponse(
         status_code=error.status_code,
         headers=headers,

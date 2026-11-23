@@ -1,0 +1,1630 @@
+[
+  {
+    "text": "Пойдём в стрип-клуб",
+    "allowed": false
+  },
+  {
+    "text": "Стриптиз клуб",
+    "allowed": false
+  },
+  {
+    "text": "В стрипбаре",
+    "allowed": false
+  },
+  {
+    "text": "STRIP CLUB",
+    "allowed": false
+  },
+  {
+    "text": "striptease-clubs",
+    "allowed": false
+  },
+  {
+    "text": "стpип-клyб",
+    "allowed": false
+  },
+  {
+    "text": "с т р и п к л у б",
+    "allowed": false
+  },
+  {
+    "text": "стрип​клуб",
+    "allowed": false
+  },
+  {
+    "text": "На заброшку",
+    "allowed": false
+  },
+  {
+    "text": "зaбр0шкa",
+    "allowed": false
+  },
+  {
+    "text": "заброшенное здание",
+    "allowed": false
+  },
+  {
+    "text": "Заброшенная больница",
+    "allowed": false
+  },
+  {
+    "text": "завод заброшен",
+    "allowed": false
+  },
+  {
+    "text": "заброшенный старый завод",
+    "allowed": false
+  },
+  {
+    "text": "abandoned old factory",
+    "allowed": false
+  },
+  {
+    "text": "abandoned structures",
+    "allowed": false
+  },
+  {
+    "text": "заброшенное сооружение",
+    "allowed": false
+  },
+  {
+    "text": "ЗАБРОШКИ",
+    "allowed": false
+  },
+  {
+    "text": "Кофе и прогулка",
+    "allowed": true
+  },
+  {
+    "text": "Выставка в музее истории завода",
+    "allowed": true
+  },
+  {
+    "text": "Стрипсы и кофе",
+    "allowed": true
+  },
+  {
+    "text": "Комиксы и comic strip",
+    "allowed": true
+  },
+  {
+    "text": "Клуб настольных игр",
+    "allowed": true
+  },
+  {
+    "text": "Заброшенные мысли",
+    "allowed": true
+  },
+  {
+    "text": "Дом культуры",
+    "allowed": true
+  },
+  {
+    "text": "Прогулка по саду",
+    "allowed": true
+  },
+  {
+    "text": "Заброшенный сад на картине",
+    "allowed": true
+  },
+  {
+    "text": "Кафе Стрипласт",
+    "allowed": true
+  },
+  {
+    "text": "Заброшенный заводной механизм на картине",
+    "allowed": true
+  },
+  {
+    "text": "Улица Строителей, 30",
+    "allowed": true
+  },
+  {
+    "text": "Перестройка здания",
+    "allowed": true
+  },
+  {
+    "text": "хуй",
+    "allowed": false
+  },
+  {
+    "text": "хуями",
+    "allowed": false
+  },
+  {
+    "text": "похуй",
+    "allowed": false
+  },
+  {
+    "text": "нахуй",
+    "allowed": false
+  },
+  {
+    "text": "хуесос",
+    "allowed": false
+  },
+  {
+    "text": "хуйней",
+    "allowed": false
+  },
+  {
+    "text": "охуевший",
+    "allowed": false
+  },
+  {
+    "text": "хуевыми",
+    "allowed": false
+  },
+  {
+    "text": "пизда",
+    "allowed": false
+  },
+  {
+    "text": "пиздец",
+    "allowed": false
+  },
+  {
+    "text": "пиздоболы",
+    "allowed": false
+  },
+  {
+    "text": "пиздатый",
+    "allowed": false
+  },
+  {
+    "text": "пиздеть",
+    "allowed": false
+  },
+  {
+    "text": "отпиздить",
+    "allowed": false
+  },
+  {
+    "text": "спиздили",
+    "allowed": false
+  },
+  {
+    "text": "ебать",
+    "allowed": false
+  },
+  {
+    "text": "ебаный",
+    "allowed": false
+  },
+  {
+    "text": "ебанутые",
+    "allowed": false
+  },
+  {
+    "text": "еблан",
+    "allowed": false
+  },
+  {
+    "text": "заебали",
+    "allowed": false
+  },
+  {
+    "text": "выебать",
+    "allowed": false
+  },
+  {
+    "text": "разъебал",
+    "allowed": false
+  },
+  {
+    "text": "переебать",
+    "allowed": false
+  },
+  {
+    "text": "доебаться",
+    "allowed": false
+  },
+  {
+    "text": "подъебал",
+    "allowed": false
+  },
+  {
+    "text": "ебашить",
+    "allowed": false
+  },
+  {
+    "text": "наебали",
+    "allowed": false
+  },
+  {
+    "text": "заебись",
+    "allowed": false
+  },
+  {
+    "text": "бля",
+    "allowed": false
+  },
+  {
+    "text": "блять",
+    "allowed": false
+  },
+  {
+    "text": "блядь",
+    "allowed": false
+  },
+  {
+    "text": "бляди",
+    "allowed": false
+  },
+  {
+    "text": "блядскими",
+    "allowed": false
+  },
+  {
+    "text": "сучара",
+    "allowed": false
+  },
+  {
+    "text": "сука",
+    "allowed": false
+  },
+  {
+    "text": "сучкой",
+    "allowed": false
+  },
+  {
+    "text": "мудак",
+    "allowed": false
+  },
+  {
+    "text": "мудаками",
+    "allowed": false
+  },
+  {
+    "text": "мудозвон",
+    "allowed": false
+  },
+  {
+    "text": "мудила",
+    "allowed": false
+  },
+  {
+    "text": "говно",
+    "allowed": false
+  },
+  {
+    "text": "говнюк",
+    "allowed": false
+  },
+  {
+    "text": "срать",
+    "allowed": false
+  },
+  {
+    "text": "обосрался",
+    "allowed": false
+  },
+  {
+    "text": "гандоны",
+    "allowed": false
+  },
+  {
+    "text": "гондон",
+    "allowed": false
+  },
+  {
+    "text": "уебок",
+    "allowed": false
+  },
+  {
+    "text": "долбоеб",
+    "allowed": false
+  },
+  {
+    "text": "долбаеб",
+    "allowed": false
+  },
+  {
+    "text": "пидорас",
+    "allowed": false
+  },
+  {
+    "text": "педик",
+    "allowed": false
+  },
+  {
+    "text": "шлюха",
+    "allowed": false
+  },
+  {
+    "text": "чмошник",
+    "allowed": false
+  },
+  {
+    "text": "мразь",
+    "allowed": false
+  },
+  {
+    "text": "сволочь",
+    "allowed": false
+  },
+  {
+    "text": "идиоты",
+    "allowed": false
+  },
+  {
+    "text": "дебилы",
+    "allowed": false
+  },
+  {
+    "text": "ублюдки",
+    "allowed": false
+  },
+  {
+    "text": "подонки",
+    "allowed": false
+  },
+  {
+    "text": "кретин",
+    "allowed": false
+  },
+  {
+    "text": "FUCK",
+    "allowed": false
+  },
+  {
+    "text": "fuckers",
+    "allowed": false
+  },
+  {
+    "text": "motherfucking",
+    "allowed": false
+  },
+  {
+    "text": "shithead",
+    "allowed": false
+  },
+  {
+    "text": "asshole",
+    "allowed": false
+  },
+  {
+    "text": "bitches",
+    "allowed": false
+  },
+  {
+    "text": "cunt",
+    "allowed": false
+  },
+  {
+    "text": "douchebag",
+    "allowed": false
+  },
+  {
+    "text": "wanker",
+    "allowed": false
+  },
+  {
+    "text": "scumbag",
+    "allowed": false
+  },
+  {
+    "text": "faggot",
+    "allowed": false
+  },
+  {
+    "text": "nigger",
+    "allowed": false
+  },
+  {
+    "text": "БЛЯДЬ",
+    "allowed": false
+  },
+  {
+    "text": "е́бать",
+    "allowed": false
+  },
+  {
+    "text": "е​б⁠а‍ть",
+    "allowed": false
+  },
+  {
+    "text": "х у й",
+    "allowed": false
+  },
+  {
+    "text": "п.и.з.д.а",
+    "allowed": false
+  },
+  {
+    "text": "е-б-а-ть",
+    "allowed": false
+  },
+  {
+    "text": "б л я д ь",
+    "allowed": false
+  },
+  {
+    "text": "п и д о р а с",
+    "allowed": false
+  },
+  {
+    "text": "с у к а",
+    "allowed": false
+  },
+  {
+    "text": "х-уй",
+    "allowed": false
+  },
+  {
+    "text": "ху-есос",
+    "allowed": false
+  },
+  {
+    "text": "бл*дь",
+    "allowed": false
+  },
+  {
+    "text": "п*зда",
+    "allowed": false
+  },
+  {
+    "text": "х*й",
+    "allowed": false
+  },
+  {
+    "text": "п**да",
+    "allowed": false
+  },
+  {
+    "text": "сyкa",
+    "allowed": false
+  },
+  {
+    "text": "пiзда",
+    "allowed": false
+  },
+  {
+    "text": "п1зда",
+    "allowed": false
+  },
+  {
+    "text": "xyй",
+    "allowed": false
+  },
+  {
+    "text": "хуууй",
+    "allowed": false
+  },
+  {
+    "text": "сууука",
+    "allowed": false
+  },
+  {
+    "text": "бляяядь",
+    "allowed": false
+  },
+  {
+    "text": "suka",
+    "allowed": false
+  },
+  {
+    "text": "blyad",
+    "allowed": false
+  },
+  {
+    "text": "blyat",
+    "allowed": false
+  },
+  {
+    "text": "pidor",
+    "allowed": false
+  },
+  {
+    "text": "pid0r",
+    "allowed": false
+  },
+  {
+    "text": "nahuy",
+    "allowed": false
+  },
+  {
+    "text": "yebat",
+    "allowed": false
+  },
+  {
+    "text": "ebat",
+    "allowed": false
+  },
+  {
+    "text": "yeblan",
+    "allowed": false
+  },
+  {
+    "text": "pizdec",
+    "allowed": false
+  },
+  {
+    "text": "pizdets",
+    "allowed": false
+  },
+  {
+    "text": "zaebal",
+    "allowed": false
+  },
+  {
+    "text": "f*ck",
+    "allowed": false
+  },
+  {
+    "text": "f4ck",
+    "allowed": false
+  },
+  {
+    "text": "sh1t",
+    "allowed": false
+  },
+  {
+    "text": "b!tch",
+    "allowed": false
+  },
+  {
+    "text": "a$$hole",
+    "allowed": false
+  },
+  {
+    "text": "Я тебя убью",
+    "allowed": false
+  },
+  {
+    "text": "убью тебя",
+    "allowed": false
+  },
+  {
+    "text": "я вас зарежу",
+    "allowed": false
+  },
+  {
+    "text": "тебя точно изобью",
+    "allowed": false
+  },
+  {
+    "text": "Я тебя изнасилую",
+    "allowed": false
+  },
+  {
+    "text": "Давайте убивать людей",
+    "allowed": false
+  },
+  {
+    "text": "убивайте мигрантов",
+    "allowed": false
+  },
+  {
+    "text": "Смерть всем евреям",
+    "allowed": false
+  },
+  {
+    "text": "мусульман нужно уничтожить",
+    "allowed": false
+  },
+  {
+    "text": "женщины должны умереть",
+    "allowed": false
+  },
+  {
+    "text": "геев не люди",
+    "allowed": false
+  },
+  {
+    "text": "давайте ненавидеть армян",
+    "allowed": false
+  },
+  {
+    "text": "I will kill you",
+    "allowed": false
+  },
+  {
+    "text": "kill all immigrants",
+    "allowed": false
+  },
+  {
+    "text": "Продам наркотики",
+    "allowed": false
+  },
+  {
+    "text": "купим наркотиков",
+    "allowed": false
+  },
+  {
+    "text": "Попробуем кокаин",
+    "allowed": false
+  },
+  {
+    "text": "покурим траву",
+    "allowed": false
+  },
+  {
+    "text": "покурить анашу",
+    "allowed": false
+  },
+  {
+    "text": "нюхнем кокс",
+    "allowed": false
+  },
+  {
+    "text": "мефедрон с доставкой",
+    "allowed": false
+  },
+  {
+    "text": "ЛСД в наличии",
+    "allowed": false
+  },
+  {
+    "text": "работа закладчиком",
+    "allowed": false
+  },
+  {
+    "text": "вакансия кладмена",
+    "allowed": false
+  },
+  {
+    "text": "продажа наркотиков",
+    "allowed": false
+  },
+  {
+    "text": "buy cocaine",
+    "allowed": false
+  },
+  {
+    "text": "продам нарк0тики",
+    "allowed": false
+  },
+  {
+    "text": "Секс за деньги",
+    "allowed": false
+  },
+  {
+    "text": "интим за подарки",
+    "allowed": false
+  },
+  {
+    "text": "секс за 5000",
+    "allowed": false
+  },
+  {
+    "text": "сексуальные услуги",
+    "allowed": false
+  },
+  {
+    "text": "услуги эскорта",
+    "allowed": false
+  },
+  {
+    "text": "проститутки на заказ",
+    "allowed": false
+  },
+  {
+    "text": "paid sex",
+    "allowed": false
+  },
+  {
+    "text": "Обманем людей",
+    "allowed": false
+  },
+  {
+    "text": "разведем на деньги",
+    "allowed": false
+  },
+  {
+    "text": "украдем чужие пароли",
+    "allowed": false
+  },
+  {
+    "text": "оформим кредит на чужое имя",
+    "allowed": false
+  },
+  {
+    "text": "создадим фишинговый сайт",
+    "allowed": false
+  },
+  {
+    "text": "заработаем на скаме",
+    "allowed": false
+  },
+  {
+    "text": "ищу дропов",
+    "allowed": false
+  },
+  {
+    "text": "работа дроппером",
+    "allowed": false
+  },
+  {
+    "text": "sell stolen credit cards",
+    "allowed": false
+  },
+  {
+    "text": "Не обсуждаем лекцию, а продам наркотики",
+    "allowed": false
+  },
+  {
+    "text": "Лекция о защите, потом украдем пароли",
+    "allowed": false
+  },
+  {
+    "text": "Не продаю наркотики, но купим кокаин",
+    "allowed": false
+  },
+  {
+    "text": "Лекция о вреде наркотиков. Продам кокаин",
+    "allowed": false
+  },
+  {
+    "text": "Подстрахуй меня на скалодроме",
+    "allowed": true
+  },
+  {
+    "text": "Страхуй на трассе",
+    "allowed": true
+  },
+  {
+    "text": "Не психуй, выпьем чаю",
+    "allowed": true
+  },
+  {
+    "text": "Педикюр перед прогулкой",
+    "allowed": true
+  },
+  {
+    "text": "Сукно для бильярда",
+    "allowed": true
+  },
+  {
+    "text": "Сухой закон",
+    "allowed": true
+  },
+  {
+    "text": "Мандарины и чай",
+    "allowed": true
+  },
+  {
+    "text": "Мандельштам и поэзия",
+    "allowed": true
+  },
+  {
+    "text": "Кафе Бляха",
+    "allowed": true
+  },
+  {
+    "text": "Рубля хватит",
+    "allowed": true
+  },
+  {
+    "text": "Употреблять воду полезно",
+    "allowed": true
+  },
+  {
+    "text": "Потребность в общении",
+    "allowed": true
+  },
+  {
+    "text": "Гребля",
+    "allowed": true
+  },
+  {
+    "text": "Хлеб",
+    "allowed": true
+  },
+  {
+    "text": "Небо",
+    "allowed": true
+  },
+  {
+    "text": "Скоблят доски",
+    "allowed": true
+  },
+  {
+    "text": "Соскребать краску",
+    "allowed": true
+  },
+  {
+    "text": "Коктейль в баре",
+    "allowed": true
+  },
+  {
+    "text": "Купить соль и муку для кулинарного урока",
+    "allowed": true
+  },
+  {
+    "text": "Закладка в книге",
+    "allowed": true
+  },
+  {
+    "text": "Погулять по траве",
+    "allowed": true
+  },
+  {
+    "text": "Скорость света",
+    "allowed": true
+  },
+  {
+    "text": "Кафе с доставкой",
+    "allowed": true
+  },
+  {
+    "text": "Продаю билеты в музей",
+    "allowed": true
+  },
+  {
+    "text": "Обычный бар, вино и настольные игры",
+    "allowed": true
+  },
+  {
+    "text": "Лекция о вреде наркотиков",
+    "allowed": true
+  },
+  {
+    "text": "Музей наркополитики",
+    "allowed": true
+  },
+  {
+    "text": "Обсудим наркотики и зависимость",
+    "allowed": true
+  },
+  {
+    "text": "Против насилия",
+    "allowed": true
+  },
+  {
+    "text": "Как распознать мошенничество",
+    "allowed": true
+  },
+  {
+    "text": "Лекция о продаже наркотиков",
+    "allowed": true
+  },
+  {
+    "text": "Не продаю наркотики",
+    "allowed": true
+  },
+  {
+    "text": "Не будем покупать наркотики",
+    "allowed": true
+  },
+  {
+    "text": "Не буду продавать наркотики",
+    "allowed": true
+  },
+  {
+    "text": "Не куплю кокаин",
+    "allowed": true
+  },
+  {
+    "text": "Без наркотиков и угроз",
+    "allowed": true
+  },
+  {
+    "text": "Я тебя не убью",
+    "allowed": true
+  },
+  {
+    "text": "Убью время за настольной игрой",
+    "allowed": true
+  },
+  {
+    "text": "Обсудим фильм Я тебя убью",
+    "allowed": true
+  },
+  {
+    "text": "Защита от фишинговых сайтов",
+    "allowed": true
+  },
+  {
+    "text": "Лекция о сексуальных услугах",
+    "allowed": true
+  },
+  {
+    "text": "История эскорта кораблей",
+    "allowed": true
+  },
+  {
+    "text": "Разговор о сексе и здоровье",
+    "allowed": true
+  },
+  {
+    "text": "Поддержка людей с инвалидностью",
+    "allowed": true
+  },
+  {
+    "text": "ЛГБТ книжный клуб",
+    "allowed": true
+  },
+  {
+    "text": "Гей, лесбиянка, еврей, русский, мусульманин",
+    "allowed": true
+  },
+  {
+    "text": "Gay and lesbian book club",
+    "allowed": true
+  },
+  {
+    "text": "Dick and Jane",
+    "allowed": true
+  },
+  {
+    "text": "Cocktail class",
+    "allowed": true
+  },
+  {
+    "text": "Classic music",
+    "allowed": true
+  },
+  {
+    "text": "Assignment",
+    "allowed": true
+  },
+  {
+    "text": "Scunthorpe",
+    "allowed": true
+  },
+  {
+    "text": "Не только кофе, но и концерт",
+    "allowed": true
+  },
+  {
+    "text": "Мастер класс по анимации",
+    "allowed": true
+  },
+  {
+    "text": "Учимся на ошибках",
+    "allowed": true
+  },
+  {
+    "text": "Обсуждение слова «хуй»",
+    "allowed": true
+  },
+  {
+    "text": "Этимология слова блядь",
+    "allowed": true
+  },
+  {
+    "text": "Значение термина идиот",
+    "allowed": true
+  },
+  {
+    "text": "Читаем роман «Идиот»",
+    "allowed": true
+  },
+  {
+    "text": "Дискуссия о романе Идиот",
+    "allowed": true
+  },
+  {
+    "text": "Значение слова хуй, а ты еблан",
+    "allowed": false
+  },
+  {
+    "text": "Роман Идиот. Я тебя убью",
+    "allowed": false
+  },
+  {
+    "text": "Этимология слова хуй. Продам кокаин",
+    "allowed": false
+  },
+  {
+    "text": "Обсуждение слова сука и купим наркотики",
+    "allowed": false
+  },
+  {
+    "text": "ты тупой",
+    "allowed": false
+  },
+  {
+    "text": "Ты крыса",
+    "allowed": false
+  },
+  {
+    "text": "вы козлы",
+    "allowed": false
+  },
+  {
+    "text": "она шкура",
+    "allowed": false
+  },
+  {
+    "text": "ты чурбан",
+    "allowed": false
+  },
+  {
+    "text": "Мастерская: тупой нож и точильный камень",
+    "allowed": true
+  },
+  {
+    "text": "Ферма: козел, овца и свинья",
+    "allowed": true
+  },
+  {
+    "text": "Резьба по деревянным чурбанам",
+    "allowed": true
+  },
+  {
+    "text": "Баран на картине",
+    "allowed": true
+  },
+  {
+    "text": "Петух в деревне",
+    "allowed": true
+  },
+  {
+    "text": "Обсуждение книги о крысе",
+    "allowed": true
+  },
+  {
+    "text": "В мастерской: шкура и краски",
+    "allowed": true
+  },
+  {
+    "text": "стриптиз",
+    "allowed": false
+  },
+  {
+    "text": "стриптиза",
+    "allowed": false
+  },
+  {
+    "text": "стриптизом",
+    "allowed": false
+  },
+  {
+    "text": "стриптизный клуб",
+    "allowed": false
+  },
+  {
+    "text": "стриптизная вечеринка",
+    "allowed": false
+  },
+  {
+    "text": "стрипбар",
+    "allowed": false
+  },
+  {
+    "text": "с т р и п т и з",
+    "allowed": false
+  },
+  {
+    "text": "стрuптuз",
+    "allowed": false
+  },
+  {
+    "text": "striptease",
+    "allowed": false
+  },
+  {
+    "text": "striptiz",
+    "allowed": false
+  },
+  {
+    "text": "Наркотики",
+    "allowed": false
+  },
+  {
+    "text": "наркотиков",
+    "allowed": false
+  },
+  {
+    "text": "наркотиками",
+    "allowed": false
+  },
+  {
+    "text": "наркотическая вечеринка",
+    "allowed": false
+  },
+  {
+    "text": "марихуана",
+    "allowed": false
+  },
+  {
+    "text": "марихуану",
+    "allowed": false
+  },
+  {
+    "text": "мефедроном",
+    "allowed": false
+  },
+  {
+    "text": "экстази",
+    "allowed": false
+  },
+  {
+    "text": "ЛСД",
+    "allowed": false
+  },
+  {
+    "text": "наркота",
+    "allowed": false
+  },
+  {
+    "text": "н а р к о т и к и",
+    "allowed": false
+  },
+  {
+    "text": "кокаин",
+    "allowed": false
+  },
+  {
+    "text": "героин",
+    "allowed": false
+  },
+  {
+    "text": "кетамин",
+    "allowed": false
+  },
+  {
+    "text": "психоделики",
+    "allowed": false
+  },
+  {
+    "text": "наркопритон",
+    "allowed": false
+  },
+  {
+    "text": "нарко-притоны",
+    "allowed": false
+  },
+  {
+    "text": "бордель",
+    "allowed": false
+  },
+  {
+    "text": "борделе",
+    "allowed": false
+  },
+  {
+    "text": "борделям",
+    "allowed": false
+  },
+  {
+    "text": "публичный дом",
+    "allowed": false
+  },
+  {
+    "text": "публичном доме",
+    "allowed": false
+  },
+  {
+    "text": "притоны",
+    "allowed": false
+  },
+  {
+    "text": "drug den",
+    "allowed": false
+  },
+  {
+    "text": "brothel",
+    "allowed": false
+  },
+  {
+    "text": "заброшенная шахта",
+    "allowed": false
+  },
+  {
+    "text": "заброшенный бункер",
+    "allowed": false
+  },
+  {
+    "text": "аварийное здание",
+    "allowed": false
+  },
+  {
+    "text": "ветхое сооружение",
+    "allowed": false
+  },
+  {
+    "text": "недострой",
+    "allowed": false
+  },
+  {
+    "text": "недостроенное общежитие",
+    "allowed": false
+  },
+  {
+    "text": "аварийные мосты",
+    "allowed": false
+  },
+  {
+    "text": "законсервированный комбинат",
+    "allowed": false
+  },
+  {
+    "text": "покинутая больница",
+    "allowed": false
+  },
+  {
+    "text": "заброшенный коллектор",
+    "allowed": false
+  },
+  {
+    "text": "заброшенное депо",
+    "allowed": false
+  },
+  {
+    "text": "з а б р о ш е н н о е з д а н и е",
+    "allowed": false
+  },
+  {
+    "text": "закрытая крыша",
+    "allowed": false
+  },
+  {
+    "text": "на закрытую крышу",
+    "allowed": false
+  },
+  {
+    "text": "охраняемая стройка",
+    "allowed": false
+  },
+  {
+    "text": "проберемся на стройку",
+    "allowed": false
+  },
+  {
+    "text": "проникнуть на крышу",
+    "allowed": false
+  },
+  {
+    "text": "попадем тайком на стройку",
+    "allowed": false
+  },
+  {
+    "text": "крыша без доступа",
+    "allowed": false
+  },
+  {
+    "text": "restricted rooftop",
+    "allowed": false
+  },
+  {
+    "text": "sneak into a construction site",
+    "allowed": false
+  },
+  {
+    "text": "пидр",
+    "allowed": false
+  },
+  {
+    "text": "педераст",
+    "allowed": false
+  },
+  {
+    "text": "мозгоеб",
+    "allowed": false
+  },
+  {
+    "text": "манда",
+    "allowed": false
+  },
+  {
+    "text": "сцуко",
+    "allowed": false
+  },
+  {
+    "text": "епать",
+    "allowed": false
+  },
+  {
+    "text": "ибать",
+    "allowed": false
+  },
+  {
+    "text": "ипать",
+    "allowed": false
+  },
+  {
+    "text": "пиздос",
+    "allowed": false
+  },
+  {
+    "text": "хуета",
+    "allowed": false
+  },
+  {
+    "text": "пидрила",
+    "allowed": false
+  },
+  {
+    "text": "блеать",
+    "allowed": false
+  },
+  {
+    "text": "нарк0тики",
+    "allowed": false
+  },
+  {
+    "text": "заброшенное здание, продам наркотики",
+    "allowed": false
+  },
+  {
+    "text": "Лекция о вреде наркотиков, а потом купим кокаин",
+    "allowed": false
+  },
+  {
+    "text": "История борделей. Пойдём в бордель",
+    "allowed": false
+  },
+  {
+    "text": "Лекция о стриптизе",
+    "allowed": true
+  },
+  {
+    "text": "Обсуждение стриптиз-клубов",
+    "allowed": true
+  },
+  {
+    "text": "История борделей",
+    "allowed": true
+  },
+  {
+    "text": "Лекция о заброшенных заводах",
+    "allowed": true
+  },
+  {
+    "text": "Против наркотиков",
+    "allowed": true
+  },
+  {
+    "text": "Профилактика наркотиков",
+    "allowed": true
+  },
+  {
+    "text": "Не предлагаю стриптиз",
+    "allowed": true
+  },
+  {
+    "text": "Без наркотиков",
+    "allowed": true
+  },
+  {
+    "text": "Коктейль в обычном баре",
+    "allowed": true
+  },
+  {
+    "text": "Музей старого завода",
+    "allowed": true
+  },
+  {
+    "text": "Открытая смотровая площадка на крыше",
+    "allowed": true
+  },
+  {
+    "text": "Поднимемся на крышу кафе",
+    "allowed": true
+  },
+  {
+    "text": "Официальная экскурсия на стройку",
+    "allowed": true
+  },
+  {
+    "text": "Художественная галерея",
+    "allowed": true
+  },
+  {
+    "text": "Улица Строителей",
+    "allowed": true
+  },
+  {
+    "text": "Заброшенный сад",
+    "allowed": true
+  },
+  {
+    "text": "Заводной механизм",
+    "allowed": true
+  },
+  {
+    "text": "Парк на месте бывшего завода",
+    "allowed": true
+  },
+  {
+    "text": "Стриппер для проводов",
+    "allowed": true
+  },
+  {
+    "text": "Стрипсы",
+    "allowed": true
+  },
+  {
+    "text": "Клубника",
+    "allowed": true
+  },
+  {
+    "text": "Антинаркотический проект",
+    "allowed": true
+  },
+  {
+    "text": "Героиня книги",
+    "allowed": true
+  },
+  {
+    "text": "Морская соль",
+    "allowed": true
+  },
+  {
+    "text": "Погуляем по траве",
+    "allowed": true
+  },
+  {
+    "text": "hue",
+    "allowed": true
+  },
+  {
+    "text": "Мандарины",
+    "allowed": true
+  },
+  {
+    "text": "Мандельштам",
+    "allowed": true
+  },
+  {
+    "text": "с.т.р.и.п.т.и.з",
+    "allowed": false
+  },
+  {
+    "text": "н.а.р.к.о.т.и.к.и",
+    "allowed": false
+  },
+  {
+    "text": "нарк*отики",
+    "allowed": false
+  },
+  {
+    "text": "zabroshka",
+    "allowed": false
+  },
+  {
+    "text": "narkotiki",
+    "allowed": false
+  },
+  {
+    "text": "priton",
+    "allowed": false
+  },
+  {
+    "text": "bordel",
+    "allowed": false
+  },
+  {
+    "text": "заброшенная станция",
+    "allowed": false
+  },
+  {
+    "text": "крыша закрыта",
+    "allowed": false
+  },
+  {
+    "text": "Обсуждение слова наркотики",
+    "allowed": true
+  },
+  {
+    "text": "Этимология слова стриптиз",
+    "allowed": true
+  },
+  {
+    "text": "Профилактика употребления наркотиков",
+    "allowed": true
+  },
+  {
+    "text": "наркооотики",
+    "allowed": false
+  },
+  {
+    "text": "н@ркотики",
+    "allowed": false
+  },
+  {
+    "text": "стрииптииз",
+    "allowed": false
+  },
+  {
+    "text": "стриптизерша",
+    "allowed": false
+  },
+  {
+    "text": "стриптизершами",
+    "allowed": false
+  },
+  {
+    "text": "стриптизеров",
+    "allowed": false
+  },
+  {
+    "text": "дома терпимости",
+    "allowed": false
+  },
+  {
+    "text": "наркоточка",
+    "allowed": false
+  },
+  {
+    "text": "нарколаборатория",
+    "allowed": false
+  },
+  {
+    "text": "аварийного жилого дома",
+    "allowed": false
+  },
+  {
+    "text": "заброшенными зданиями",
+    "allowed": false
+  },
+  {
+    "text": "заброшенных зданий",
+    "allowed": false
+  },
+  {
+    "text": "заброшенной фабрикой",
+    "allowed": false
+  },
+  {
+    "text": "заброшенную шахту",
+    "allowed": false
+  },
+  {
+    "text": "на заброшенный старый жилой завод",
+    "allowed": false
+  },
+  {
+    "text": "аварийные конструкции",
+    "allowed": false
+  },
+  {
+    "text": "долгострой",
+    "allowed": false
+  },
+  {
+    "text": "незаконное проникновение на стройку",
+    "allowed": false
+  },
+  {
+    "text": "в заброшенном тоннеле",
+    "allowed": false
+  },
+  {
+    "text": "из заброшенного тоннеля",
+    "allowed": false
+  },
+  {
+    "text": "по заброшенным тоннелям",
+    "allowed": false
+  },
+  {
+    "text": "заброшенным отелем",
+    "allowed": false
+  },
+  {
+    "text": "заброшенного санатория",
+    "allowed": false
+  },
+  {
+    "text": "заброшенная котельня",
+    "allowed": false
+  },
+  {
+    "text": "в аварийной котельне",
+    "allowed": false
+  },
+  {
+    "text": "из недостроя",
+    "allowed": false
+  },
+  {
+    "text": "по долгостроям",
+    "allowed": false
+  },
+  {
+    "text": "покинутый госпиталь",
+    "allowed": false
+  },
+  {
+    "text": "заброшенных госпиталей",
+    "allowed": false
+  },
+  {
+    "text": "гашишем",
+    "allowed": false
+  }
+]

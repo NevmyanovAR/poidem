@@ -105,7 +105,7 @@ test('static assets use only approved colors; authored small-text pairs meet con
   }
 })
 
-test('mobile browser without SDK keeps only temporary drafts and reloads deep links safely', async ({ page }) => {
+test('mobile browser without SDK previews input but never creates a local substitute for server plans', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const errors: string[] = []
   const serviceRequests: string[] = []
@@ -121,22 +121,18 @@ test('mobile browser without SDK keeps only temporary drafts and reloads deep li
   expect(await page.evaluate(() => window.Telegram)).toBeUndefined()
   await page.getByRole('link', { name: 'Посмотреть планы' }).click()
   await page.getByRole('link', { name: 'Найти свой план', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Пока нет опубликованных планов' })).toBeVisible()
-  await page.getByRole('link', { name: 'Создать первый план' }).click()
+  await expect(page.getByRole('heading', { name: 'Войди, чтобы увидеть планы' })).toBeVisible()
+  await page.goto('/create')
   await page.getByRole('textbox', { name: 'Название плана' }).fill('Кофе в 18.30')
   await page.getByRole('textbox', { name: 'Где встречаемся?' }).fill('ул. Примерная, 3')
   await page.locator('input[name=date]').fill(new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10))
   await page.locator('input[name=time]').fill('18:30')
   await page.getByRole('button', { name: 'Посмотреть план', exact: true }).click()
-  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
-  await expect(page.locator('.my-plan')).toHaveCount(1)
-  await expect(page.getByText('Черновик', { exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Кофе в 18.30', exact: true })).toBeVisible()
-  await page.getByRole('link', { name: 'Посмотреть статус', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Черновик сохранён' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Сохранить план', exact: true })).toBeDisabled()
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Этот план не найден', exact: true })).toBeVisible()
-  await page.getByRole('link', { name: 'Выбрать другой', exact: true }).click()
+  await page.goto('/plans')
+  await expect(page.locator('.my-plan')).toHaveCount(0)
+  await page.goto('/catalog')
   await expect(page.locator('.plan-card')).toHaveCount(0)
   expect(serviceRequests).toEqual([])
   expect(errors).toEqual([])

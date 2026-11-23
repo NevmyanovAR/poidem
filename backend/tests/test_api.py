@@ -45,8 +45,11 @@ def test_no_public_personal_write_routes(client, path):
             "Cookie": "poidem_session=forged",
         },
     )
-    assert response.status_code == 404
-    assert response.json()["error"]["code"] == "RESOURCE_NOT_FOUND"
+    if path == "/api/v1/plans":
+        assert response.status_code == 401
+    else:
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == "RESOURCE_NOT_FOUND"
 
 
 def test_unknown_path_and_method_have_safe_json_errors(client):
@@ -156,7 +159,7 @@ def test_reference_data_is_read_only_and_excludes_disabled_rows(client, migratio
         codes = {item["code"] for item in response.json()["interests"]}
         assert f"{code}-on" in codes
         assert f"{code}-off" not in codes
-        assert response.json()["business_operations_enabled"] is False
+        assert response.json()["business_operations_enabled"] is True
         assert client.post("/api/v1/reference-data", json={}).status_code == 405
     finally:
         with migration_engine.begin() as connection:

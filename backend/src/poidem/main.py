@@ -13,7 +13,7 @@ from poidem.api.middleware import (
     ExceptionBoundaryMiddleware,
     RequestContextMiddleware,
 )
-from poidem.api.routers import account, health, reference_data
+from poidem.api.routers import account, health, plans, reference_data
 from poidem.db.session import Database
 from poidem.services.media import cleanup_loop
 from poidem.settings import Settings, load_settings
@@ -49,6 +49,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(reference_data.router)
     app.include_router(account.router)
+    app.include_router(plans.router)
     # Последний добавленный middleware оборачивает остальные.
     app.add_middleware(ExceptionBoundaryMiddleware)
     app.add_middleware(BodyLimitMiddleware, photo_max_bytes=settings.photo_max_bytes)
@@ -57,8 +58,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "X-CSRF-Token"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "X-CSRF-Token", "Idempotency-Key", "X-Account-Context"],
         expose_headers=["X-Request-ID"],
     )
     app.add_middleware(RequestContextMiddleware)

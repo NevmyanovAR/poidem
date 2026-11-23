@@ -11,21 +11,53 @@ async function planFields(page: Page, title: string) {
 }
 
 test('text filtering reports errors without deleting the title or description', async ({ page }) => {
+  await page.route('https://telegram.org/js/telegram-web-app.js', route => route.abort())
   await page.goto('/create')
   await planFields(page, '  СТРИП-КЛУБ  ')
-  await page.getByRole('button', { name: 'Посмотреть план', exact: true }).click()
-  await expect(page.getByText('В планах нельзя предлагать посещение стрип-клубов', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Посмотреть план', exact: true })).toBeDisabled()
+  await expect(page.getByText('В планах нельзя предлагать стриптиз и посещение стрип-клубов', { exact: true })).toBeVisible()
   await expect(page.getByRole('textbox', { name: 'Название плана' })).toHaveValue('  СТРИП-КЛУБ  ')
   await page.getByRole('textbox', { name: 'Название плана' }).fill('Кофе и стрипсы')
   await page.locator('textarea[name=description]').fill('Пойдём в заброшенное здание')
-  await page.getByRole('button', { name: 'Посмотреть план', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Посмотреть план', exact: true })).toBeDisabled()
   await expect(page.locator('textarea[name=description]')).toHaveValue('Пойдём в заброшенное здание')
   await expect(page.getByText('Выбери безопасное место вместо заброшенного здания или сооружения', { exact: true })).toBeVisible()
   expect(await page.evaluate(() => localStorage.getItem('poidem:simulation:v1'))).toBeNull()
   await page.locator('textarea[name=description]').fill('Кофе, клубника и разговор')
   await page.getByRole('button', { name: 'Посмотреть план', exact: true }).click()
-  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
-  await expect(page).toHaveURL('/plans')
+  await expect(page.getByRole('button', { name: 'Сохранить план', exact: true })).toBeDisabled()
+})
+
+test('all three text fields reject forbidden words immediately, recover on correction and send no plan requests', async ({ page }) => {
+  await page.route('https://telegram.org/js/telegram-web-app.js', route => route.abort())
+  const writes: string[] = []
+  page.on('request', request => {
+    if (request.url().includes('/api/v1/plans') && request.method() !== 'GET') writes.push(request.method())
+  })
+  await page.goto('/create', { waitUntil: 'domcontentloaded' })
+  for (const field of ['title', 'description', 'place']) {
+    const input = page.locator(`form [name=${field}]`)
+    for (const word of ['хуй', 'стриптиз', 'наркотики', 'бордель', 'закрытая крыша', 'аварийное здание', 'бл*дь']) {
+      await input.fill(word)
+      await expect(input).toHaveAttribute('aria-invalid', 'true')
+      await expect(page.locator(`#error-${field}`)).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Посмотреть план', exact: true })).toBeDisabled()
+      await expect(input).toHaveValue(word)
+      await input.fill('Кофе и прогулка')
+      await expect(page.locator(`#error-${field}`)).toHaveCount(0)
+      await expect(input).toHaveAttribute('aria-invalid', 'false')
+    }
+    await input.fill('')
+  }
+  const title = page.locator('[name=title]')
+  await title.fill('ху')
+  await expect(title).toHaveAttribute('aria-invalid', 'false')
+  await title.pressSequentially('й')
+  await expect(title).toHaveAttribute('aria-invalid', 'true')
+  await title.fill('Кофе')
+  await page.locator('textarea[name=description]').fill('Лекция о вреде наркотиков')
+  await expect(page.locator('[role=alert]')).toHaveCount(0)
+  expect(writes).toEqual([])
 })
 
 test('forged client Telegram data does not become verified authentication', async ({ page }) => {
@@ -35,6 +67,6 @@ test('forged client Telegram data does not become verified authentication', asyn
   } } }))
   await page.route('https://telegram.org/js/telegram-web-app.js', route => route.fulfill({ status: 200, body: '' }))
   await page.goto('/profile')
-  await expect(page.getByText('Сервер пока не подключён', { exact: true })).toBeVisible()
+  await expect(page.locator('.trust-status').filter({ hasText: /Сервер пока не подключён|Недопустимый источник запроса|Не удалось подтвердить вход через Telegram/ })).toBeVisible()
   await expect(page.getByText('Данные Telegram подтверждены сервером', { exact: true })).toHaveCount(0)
 })

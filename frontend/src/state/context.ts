@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { AuthorizationState, AppState, Plan, Profile, PublishedPlan } from '../types'
+import type { AuthorizationState, AppState, Plan, PlanInput, Profile, PublishedPlan } from '../types'
 import type { CreationQuota } from '../lib/planRules'
 
 export interface AppContextValue {
@@ -14,7 +14,14 @@ export interface AppContextValue {
   busy: boolean
   deleteAccount: () => Promise<boolean>
   retryAuthorization: () => Promise<void>
-  createPlan: (plan: Plan) => boolean
+  createPlan: (plan: PlanInput, key: string) => Promise<boolean>
+  editPlan: (plan: Plan, fields: PlanInput) => Promise<boolean>
+  publishPlan: (plan: Plan) => Promise<boolean>
+  cancelPlan: (plan: Plan) => Promise<boolean>
+  refreshPlans: () => Promise<void>
+  plansLoading: boolean
+  plansError: string
+  planError: string
   reset: () => void
 }
 export const AppContext = createContext<AppContextValue | null>(null)

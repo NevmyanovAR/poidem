@@ -50,6 +50,6 @@ export default function App() {
     {!isWelcome && <><footer className="site-footer"><Brand /><span>Сначала — что делать. Потом — с кем</span><button className="quiet-button" onClick={() => setShowReset(true)}>Очистить данные</button></footer>
       <nav className="mobile-nav" aria-label="Мобильная навигация">{links.map(({ to, text, icon: Icon }) => <NavLink key={to} to={to}><Icon size={21} /><span>{text}</span></NavLink>)}<NavLink to="/create" className="mobile-create" aria-label="Создать свой план"><Plus size={23} /></NavLink></nav></>}
     <div className={`toast ${toast ? 'is-visible' : ''}`} role="status" aria-live="polite">{toast}</div>
-    {showReset && <Modal title="Очистить данные?" onClose={() => setShowReset(false)}><p>Временные черновики и старые данные прототипа на устройстве будут очищены. Серверный аккаунт сохранится; удалить его можно в «Моей анкете»</p><button className="button button-outline" onClick={() => { reset(); setShowReset(false) }}>Очистить <X size={16} /></button></Modal>}
+    {showReset && <Modal title="Очистить данные?" onClose={() => setShowReset(false)}><p>Данные на этом устройстве будут очищены. Серверные анкета и планы сохранятся; удалить аккаунт можно в «Моей анкете», если нет связанных записей</p><button className="button button-outline" onClick={() => { reset(); setShowReset(false) }}>Очистить <X size={16} /></button></Modal>}
   </>
 }

@@ -11,14 +11,14 @@ test('real HTTPS frontend and API share one origin without a fake login', async 
   await expect(page.getByRole('button', { name: 'Заполнить примером' })).toHaveCount(0)
   const reference = await request.get('/api/v1/reference-data')
   expect(reference.status()).toBe(200)
-  expect((await reference.json()).business_operations_enabled).toBe(false)
+  expect((await reference.json()).business_operations_enabled).toBe(true)
   expect((await request.get('/api/v1/me')).status()).toBe(401)
   await page.evaluate(() => fetch('/api/v1/reference-data', { credentials: 'include' }).then(r => r.status))
   expect(origins.every(origin => origin === base)).toBe(true)
   await page.getByRole('navigation', { name: 'Мобильная навигация' }).getByRole('link', { name: 'Главная', exact: true }).click()
   await expect(page).toHaveURL('/home')
   await page.getByRole('link', { name: 'Найти свой план', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Пока нет опубликованных планов' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Войди, чтобы увидеть планы' })).toBeVisible()
 })
 
 test('private workspace files are inaccessible through the tunnel', async ({ request }) => {

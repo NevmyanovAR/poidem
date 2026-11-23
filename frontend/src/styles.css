@@ -598,6 +598,9 @@ input[type='time']::-webkit-calendar-picker-indicator {
 .moderation-status { margin: 12px 0; color: var(--sky); font-size: 11px; line-height: 1.8; }
 .moderation-status p { color: var(--muted); font-size: 10px; }
 button:disabled { cursor: not-allowed; }
+.plan-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+.plan-card { min-width: 0; }
+.plan-content, .my-plan-content { overflow-wrap: anywhere; min-width: 0; }
 @media (min-width: 681px) {
   .profile-page .form-intro > .profile-authorization { grid-column: 2; grid-row: 2; max-width: 640px; margin: 0; }
   .profile-page > .form-panel { grid-row: 3; }
