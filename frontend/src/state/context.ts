@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { AuthorizationState, AppState, Plan, PlanInput, Profile, PublishedPlan } from '../types'
+import type { AuthorizationState, AppState, Plan, PlanInput, Profile, PublishedPlan, PublicProfile, PairMatch, PlanResponse, ResponseCapacity, MatchContact, ActivityPage, ChatState, ChatMessage, MessagePage, ResponsePage } from '../types'
 import type { CreationQuota } from '../lib/planRules'
 
 export interface AppContextValue {
@@ -23,6 +23,26 @@ export interface AppContextValue {
   plansError: string
   planError: string
   reset: () => void
+  incomingResponses: PlanResponse[]
+  outgoingResponses: PlanResponse[]
+  matches: PairMatch[]
+  connectionsLoading: boolean
+  connectionsError: string
+  refreshConnections: () => Promise<void>
+  loadPlan: (id: string) => Promise<PublishedPlan>
+  loadAuthor: (id: string) => Promise<PublicProfile>
+  loadCapacity: (id: string) => Promise<ResponseCapacity>
+  loadMatch: (id: string) => Promise<PairMatch>
+  loadContact: (id: string) => Promise<MatchContact>
+  loadPlanResponses: (id: string, cursor?: string) => Promise<ResponsePage>
+  loadActivity: (scope: 'active' | 'archive', includeHidden: boolean, cursor?: string) => Promise<ActivityPage>
+  hideArchive: (planId: string, hidden: boolean) => Promise<void>
+  loadChat: (id: string) => Promise<ChatState>
+  loadMessages: (id: string, direction?: { before?: number; after?: number }) => Promise<MessagePage>
+  sendMessage: (id: string, text: string, clientId: string) => Promise<ChatMessage>
+  readChat: (id: string, sequence: number) => Promise<ChatState>
+  respond: (plan: Plan, key: string) => Promise<PlanResponse | null>
+  decide: (response: PlanResponse, decision: 'accept' | 'decline') => Promise<PlanResponse | null>
 }
 export const AppContext = createContext<AppContextValue | null>(null)
 export function useAppData() {

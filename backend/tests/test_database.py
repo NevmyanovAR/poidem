@@ -62,7 +62,7 @@ def test_migrations_create_complete_schema(runtime_engine):
     tables = set(inspect(runtime_engine).get_table_names())
     assert set(Base.metadata.tables) <= tables
     with runtime_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0003"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0006"
 
 
 def test_roles_are_not_superusers(runtime_engine, migration_engine):
@@ -181,6 +181,18 @@ def test_repeated_match_for_same_response_is_rejected(db, plan, accepted_respons
     db.add(match_for(plan, accepted_response))
     with pytest.raises(IntegrityError):
         db.flush()
+
+
+def test_one_match_per_plan_even_with_another_response(db, plan, accepted_response, users):
+    second = response_for(plan, users[2], 2)
+    db.add(second)
+    db.flush()
+    db.add(match_for(plan, accepted_response))
+    db.flush()
+    db.add(match_for(plan, second))
+    with pytest.raises(IntegrityError) as error:
+        db.flush()
+    assert error.value.orig.diag.constraint_name == "uq_matches_plan_id"
 
 
 def test_bot_binding_cannot_claim_another_telegram_identity(db, users):

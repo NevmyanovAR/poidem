@@ -30,7 +30,14 @@ where = ["src"]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
 markers = ["database: requires the isolated PostgreSQL test database"]
-filterwarnings = ["error"]
+# FastAPI 0.165 клонирует Header(alias=...) через TypeAdapter и сам подавляет
+# это предупреждение Pydantic 2.14. В Python 3.13 catch_warnings не thread-safe.
+# Узкое исключение для той же совместимости в многопоточных TestClient-тестах;
+# все остальные предупреждения по-прежнему ошибки. Проверки alias/CSRF остаются.
+filterwarnings = [
+  "error",
+  "ignore:The 'alias' attribute with value .*:pydantic.warnings.UnsupportedFieldAttributeWarning:pydantic._internal._generate_schema",
+]
 
 [tool.ruff]
 target-version = "py313"

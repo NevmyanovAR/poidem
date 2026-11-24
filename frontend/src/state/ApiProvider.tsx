@@ -5,7 +5,7 @@ import { getTelegramInitData } from '../lib/telegram'
 import type { CreationQuota } from '../lib/planRules'
 import { emptyState } from './model'
 import { clearLegacyData } from '../lib/legacyStorage'
-import type { AuthorizationState, AppState, Profile, PublishedPlan } from '../types'
+import type { AuthorizationState, AppState, Profile, PublishedPlan, PlanResponse, PairMatch } from '../types'
 import { AppContext } from './context'
 
 const unavailableQuota = (): CreationQuota => ({ maximum: 3, used: 0, remaining: 0, day: '', timeZone: 'Europe/Moscow', ready: false })
@@ -21,6 +21,11 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   const [plansLoading, setPlansLoading] = useState(false)
   const [plansError, setPlansError] = useState('')
   const [planError, setPlanError] = useState('')
+  const [incomingResponses, setIncomingResponses] = useState<PlanResponse[]>([])
+  const [outgoingResponses, setOutgoingResponses] = useState<PlanResponse[]>([])
+  const [matches, setMatches] = useState<PairMatch[]>([])
+  const [connectionsLoading, setConnectionsLoading] = useState(false)
+  const [connectionsError, setConnectionsError] = useState('')
   const active = useRef(false)
   const closing = useRef(false)
   const autoAuthDisabled = useRef(false)
@@ -28,6 +33,30 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   const authEpoch = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const refreshFlight = useRef<{ epoch: number; task: Promise<void> } | null>(null)
+  const connectionFlight = useRef<{ epoch: number; task: Promise<void> } | null>(null)
+  const refreshConnections = useCallback((epoch = authEpoch.current): Promise<void> => {
+    if (!client.hasSession || closing.current) return Promise.resolve()
+    if (connectionFlight.current?.epoch === epoch) return connectionFlight.current.task
+    const task = (async () => {
+      setConnectionsLoading(true); setConnectionsError('')
+      try {
+        const [incoming, outgoing, pairs] = await Promise.all([client.responses('incoming'), client.responses('outgoing'), client.matches()])
+        if (!active.current || closing.current || epoch !== authEpoch.current) return
+        setIncomingResponses(incoming); setOutgoingResponses(outgoing); setMatches(pairs)
+      } catch (error) {
+        if (!active.current || closing.current || epoch !== authEpoch.current) return
+        setConnectionsError(error instanceof Error ? error.message : 'Не удалось загрузить отклики')
+        if (error instanceof ApiError && (error.status === 401 || error.code === 'AUTH_CONTEXT_CHANGED')) {
+          setIncomingResponses([]); setOutgoingResponses([]); setMatches([])
+          setAuthorization({ status: 'unverified' })
+        }
+      } finally { if (active.current && epoch === authEpoch.current) setConnectionsLoading(false) }
+    })()
+    connectionFlight.current = { epoch, task }
+    const clear = () => { if (connectionFlight.current?.task === task) connectionFlight.current = null }
+    void task.then(clear, clear)
+    return task
+  }, [client])
   const refreshPlans = useCallback((epoch = authEpoch.current): Promise<void> => {
     if (!client.hasSession || closing.current) return Promise.resolve()
     if (refreshFlight.current?.epoch === epoch) return refreshFlight.current.task
@@ -73,6 +102,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
     lastLaunch.current = raw
     const epoch = ++authEpoch.current
     setData(emptyState())
+    setIncomingResponses([]); setOutgoingResponses([]); setMatches([]); setConnectionsError('')
     setPublishedPlans([]); setDailyQuota(unavailableQuota()); setPlansError(''); setPlanError('')
     setAuthorization({ status: 'checking' })
     try {
@@ -82,7 +112,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
       setAuthorization(result
         ? { status: 'verified', userId: result.user.id, verifiedAt: result.authorization.verified_at }
         : { status: 'unverified' })
-      if (result) void refreshPlans(epoch)
+      if (result) { void refreshPlans(epoch); void refreshConnections(epoch) }
     } catch (error) {
       if (!active.current || closing.current || epoch !== authEpoch.current) return
       setData(emptyState())
@@ -101,7 +131,56 @@ export function ApiProvider({ children }: { children: ReactNode }) {
     }
     // authenticate замкнут на один client; данные не берутся из localStorage.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, refreshPlans])
+  }, [client, refreshPlans, refreshConnections])
+
+  const readConnection = useCallback(async <T,>(operation: () => Promise<T>): Promise<T> => {
+    const epoch = authEpoch.current
+    if (authorization.status !== 'verified' || closing.current) throw new ApiError('AUTH_REQUIRED', 'Сначала войди через Telegram')
+    let result: T
+    try { result = await operation() }
+    catch (error) {
+      if (epoch === authEpoch.current && error instanceof ApiError && (error.status === 401 || error.code === 'AUTH_CONTEXT_CHANGED')) {
+        setData(emptyState()); setPublishedPlans([]); setIncomingResponses([]); setOutgoingResponses([]); setMatches([])
+        setDailyQuota(unavailableQuota()); setAuthorization({ status: 'unverified' })
+      }
+      throw error
+    }
+    if (!active.current || closing.current || epoch !== authEpoch.current) throw new ApiError('AUTH_CONTEXT_CHANGED', 'Аккаунт сменился')
+    return result
+  }, [authorization.status])
+  const loadPlan = useCallback((id: string) => readConnection(() => client.plan(id)), [client, readConnection])
+  const loadAuthor = useCallback((id: string) => readConnection(() => client.planAuthor(id)), [client, readConnection])
+  const loadCapacity = useCallback((id: string) => readConnection(() => client.capacity(id)), [client, readConnection])
+  const loadMatch = useCallback((id: string) => readConnection(() => client.match(id)), [client, readConnection])
+  const loadContact = useCallback((id: string) => readConnection(() => client.contact(id)), [client, readConnection])
+  const loadPlanResponses = useCallback((id: string, cursor?: string) => readConnection(() => client.planResponses(id, cursor)), [client, readConnection])
+  const loadActivity = useCallback((scope: 'active' | 'archive', includeHidden: boolean, cursor?: string) => readConnection(() => client.activity(scope, includeHidden, cursor)), [client, readConnection])
+  const hideArchive = useCallback((planId: string, hidden: boolean) => readConnection(() => client.archiveVisibility(planId, hidden)), [client, readConnection])
+  const loadChat = useCallback((id: string) => readConnection(() => client.chat(id)), [client, readConnection])
+  const loadMessages = useCallback((id: string, direction?: { before?: number; after?: number }) => readConnection(() => client.messages(id, direction)), [client, readConnection])
+  const sendMessage = useCallback((id: string, text: string, key: string) => readConnection(() => client.sendMessage(id, text, key)), [client, readConnection])
+  const readChat = useCallback((id: string, sequence: number) => readConnection(() => client.readChat(id, sequence)), [client, readConnection])
+  async function writeConnection(operation: () => Promise<PlanResponse>): Promise<PlanResponse | null> {
+    if (authorization.status !== 'verified' || busy || closing.current) return null
+    const epoch = authEpoch.current
+    setBusy(true); setConnectionsError('')
+    try {
+      const result = await operation()
+      if (!active.current || closing.current || epoch !== authEpoch.current) return null
+      if (refreshFlight.current?.epoch === epoch) await refreshFlight.current.task
+      if (connectionFlight.current?.epoch === epoch) await connectionFlight.current.task
+      await Promise.all([refreshPlans(epoch), refreshConnections(epoch)])
+      return active.current && !closing.current && epoch === authEpoch.current ? result : null
+    } catch (error) {
+      if (active.current && !closing.current && epoch === authEpoch.current) {
+        const message = error instanceof Error ? error.message : 'Не удалось сохранить отклик'
+        report(error)
+        if (error instanceof ApiError && error.status === 409) await Promise.all([refreshPlans(epoch), refreshConnections(epoch)])
+        setConnectionsError(message)
+      }
+      return null
+    } finally { if (active.current && epoch === authEpoch.current) setBusy(false) }
+  }
 
   async function writePlan(operation: () => Promise<PublishedPlan>, message: string): Promise<boolean> {
     if (authorization.status !== 'verified' || busy || closing.current) {
@@ -132,6 +211,12 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   return <AppContext.Provider value={{
     data, plans: data.ownPlans, publishedPlans,
     authorization, busy, dailyQuota, plansLoading, plansError, planError,
+    incomingResponses, outgoingResponses, matches, connectionsLoading, connectionsError, refreshConnections,
+    loadPlan, loadAuthor, loadCapacity, loadMatch, loadContact,
+    loadPlanResponses,
+    loadActivity, hideArchive, loadChat, loadMessages, sendMessage, readChat,
+    respond: (plan, key) => writeConnection(() => client.sendResponse(plan, key)),
+    decide: (response, decision) => writeConnection(() => client.decideResponse(response, decision)),
     refreshPlans,
     toast, notify, async retryAuthorization() { autoAuthDisabled.current = false; await authenticate(true) },
     async saveProfile(profile: Profile, file?: File | null) {
@@ -159,6 +244,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
         const result = await client.deleteAccount(expectedUserId)
         if (!active.current) return false
         setData(emptyState()); setPublishedPlans([]); setDailyQuota(unavailableQuota()); setAuthorization({ status: 'unverified' })
+        setIncomingResponses([]); setOutgoingResponses([]); setMatches([]); setConnectionsError('')
         autoAuthDisabled.current = true
         clearLegacyData(true)
         notify(result.media_cleanup_pending ? 'Аккаунт удалён. Очистка файлов будет повторена сервером' : 'Аккаунт и фотографии удалены')

@@ -13,8 +13,9 @@ from poidem.api.middleware import (
     ExceptionBoundaryMiddleware,
     RequestContextMiddleware,
 )
-from poidem.api.routers import account, health, plans, reference_data
+from poidem.api.routers import account, activity, connections, health, plans, reference_data
 from poidem.db.session import Database
+from poidem.services.archive import archive_loop
 from poidem.services.media import cleanup_loop
 from poidem.settings import Settings, load_settings
 
@@ -29,12 +30,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.settings = settings
         app.state.photo_limiter = anyio.CapacityLimiter(2)
         cleanup = asyncio.create_task(cleanup_loop(app.state.database, settings))
+        archiving = asyncio.create_task(archive_loop(app.state.database))
         try:
             yield
         finally:
             cleanup.cancel()
+            archiving.cancel()
             with suppress(asyncio.CancelledError):
                 await cleanup
+            with suppress(asyncio.CancelledError):
+                await archiving
             await app.state.database.close()
 
     app = FastAPI(
@@ -50,6 +55,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(reference_data.router)
     app.include_router(account.router)
     app.include_router(plans.router)
+    app.include_router(connections.router)
+    app.include_router(activity.router)
     # Последний добавленный middleware оборачивает остальные.
     app.add_middleware(ExceptionBoundaryMiddleware)
     app.add_middleware(BodyLimitMiddleware, photo_max_bytes=settings.photo_max_bytes)

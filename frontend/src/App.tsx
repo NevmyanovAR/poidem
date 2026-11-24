@@ -13,6 +13,7 @@ import { CreatePlan } from './pages/CreatePlan'
 import { MyPlans } from './pages/MyPlans'
 import { Inspiration } from './pages/Inspiration'
 import { Match } from './pages/Match'
+import { Chat } from './pages/Chat'
 import { EmptyState } from './components/ui'
 
 const links = [{ to: '/home', text: 'Главная', icon: HomeIcon }, { to: '/catalog', text: 'Найти план', icon: Compass }, { to: '/plans', text: 'Мои планы', icon: Heart }, { to: '/inspiration', text: 'Вдохновение', icon: ArrowUpRight }]
@@ -44,6 +45,7 @@ export default function App() {
       <Route path="/plans" element={<MyPlans />} />
       <Route path="/inspiration" element={<Inspiration />} />
       <Route path="/match/:inviteId" element={<Match />} />
+      <Route path="/match/:inviteId/chat" element={<Chat />} />
       <Route path="/start" element={<Navigate to="/" replace />} />
       <Route path="*" element={<EmptyState title="Кажется, мы свернули не туда" action="На главную" to="/home">Такой страницы нет. Но хороший план обязательно найдётся</EmptyState>} />
     </Routes></main>

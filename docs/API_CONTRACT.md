@@ -1,5 +1,15 @@
 # Проект контракта API
 
+Версия 0.8 / D52: endpoints и миграции прежние. ResponseDTO дополнен display_status (waiting|accepted|rejected|closed|expired|cancelled|unavailable) и decided_at (nullable UTC). status по-прежнему отражает БД; expired/cancelled/unavailable вычисляются только для waiting и не записываются как статусы отклика. GET /plans/{id}/responses с limit/cursor читается автором и для архивного плана, включая все результаты; чужой пользователь — 404, без сессии — 401. GET /me/activity активного scope больше не выдаёт истёкшие outgoing как активные. [Поля, семантика и права](RESPONSE_HISTORY_UX.md#api-и-хранение)
+
+Версия 0.7 / D51 / migration 0006: endpoints прежние. ResponseDTO дополнен viewer_role (author|responder), history_context и match для accepted. MatchDTO содержит viewer_role. История отказа использует неизменяемый минимальный снимок, у rejected отправителю plan/profile остаются null. Все права/CSRF/квоты и D50 сохраняются. [Поля и семантика](CARDS_UX_REVIEW.md#изменённые-данные-и-api)
+
+
+Версия 0.6 / D50 / migration 0005: rejected окончательный; отклонённому план и публичный контекст недоступны, ResponseDTO.plan/profile=null. 15 ожидающих, место освобождается только другим людям. Реализованы /matches/{id}/chat, /messages, /read, GET /me/activity и POST /me/archive/{plan_id}/visibility. [Полный действующий контракт и пагинация](CHAT_ARCHIVE_STAGE5.md#api). Предыдущие описания повторной попытки и обязательной связи через Telegram заменены D50
+
+
+Версия 0.5 / D49: [действующий API откликов/мэтчей](MATCHES_STAGE5.md#api). Лимит теперь 15 одновременно ожидающих, отказ освобождает слот; попытки сохраняются отдельно. Один Match на план, контекстные public profile/photo, контакт только участникам. POST отклика: expected_plan_version и UUID Idempotency-Key; решение автора: expected_version/decision. Следующие старые предположения о 15 исторических людях и нерешённой кратности мэтчей заменены D49.
+
 D48: клиент показывает полные ошибки текста при вводе по генерируемой политике, но сервер независимо применяет те же ограничения на POST/PATCH/publish. Расширены формы названий локаций и наркотиков, сохранены нейтральные обсуждения. HTTP/DTO не менялись, новых endpoints для отправки текста на каждый символ нет. [Правила и синхронизация](CONTENT_FILTER.md).
 
 D47, 23.11.2026: при создании, PATCH и публикации планов действует расширенный [фильтр содержания](CONTENT_FILTER.md). Мат/оскорбления и явные опасные предложения возвращают HTTP 422 `PLAN_CONTENT_REJECTED` с безопасной причиной и словарём `fields` для title/description/place. Это не блокировка аккаунта и не новая стадия модерации. Неуспешное создание не расходует квоту, отклонённое изменение не заменяет сохранённый план. DTO и endpoints не изменены.

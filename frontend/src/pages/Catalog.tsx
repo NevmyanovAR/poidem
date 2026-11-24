@@ -9,6 +9,11 @@ export function Catalog() {
   const category = params.get('category') ?? 'Все планы'
   const { publishedPlans, authorization, refreshPlans, plansLoading, plansError } = useAppData()
   useEffect(() => { if (authorization.status === 'verified') void refreshPlans() }, [authorization.status, refreshPlans])
+  useEffect(() => {
+    if (authorization.status !== 'verified') return
+    const interval = window.setInterval(() => { if (document.visibilityState === 'visible') void refreshPlans() }, 10000)
+    return () => window.clearInterval(interval)
+  }, [authorization.status, refreshPlans])
   const filtered = publishedPlans.filter(p => category === 'Все планы' || p.category === category)
   return <><PageHeading eyebrow="Предложения для совместной встречи" title="Найти" italic="планы">Здесь появятся планы, опубликованные пользователями</PageHeading>
     <div className="filter-row" aria-label="Категории планов">{CATEGORIES.map(item => <button key={item} className={`chip ${category === item ? 'selected' : ''}`} aria-pressed={category === item} onClick={() => setParams(item === 'Все планы' ? {} : { category: item })}>{item}</button>)}</div>

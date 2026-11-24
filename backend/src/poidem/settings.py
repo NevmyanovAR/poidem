@@ -64,6 +64,7 @@ class Settings(BaseSettings):
     photo_max_edge: int = Field(default=2048, ge=128, le=4096)
     login_requests_per_minute: int = Field(default=30, ge=1, le=120)
     photo_requests_per_minute: int = Field(default=10, ge=1, le=60)
+    chat_messages_per_minute: int = Field(default=30, ge=1, le=120)
 
     @field_validator("telegram_bot_token", mode="before")
     @classmethod

@@ -29,11 +29,12 @@ export function creationQuota(plans: readonly Plan[], now = new Date()): Creatio
 }
 
 export interface ResponseCapacity { count: number; maximum: number; full: boolean; alreadyResponded: boolean }
-export function responseCapacity(planId: string, authorId: string, viewerId: string, responses: readonly { planId: string; responderId: string }[]): ResponseCapacity {
-  // Count distinct people; status transitions never invent a quota-release policy.
+export function responseCapacity(planId: string, authorId: string, viewerId: string, responses: readonly { planId: string; responderId: string; status?: string }[]): ResponseCapacity {
+  // D49: до 15 разных ожидающих; отклонённые и закрытые попытки слот не занимают.
   const ids = new Set<string>()
   for (const response of responses) {
     if (response.planId !== planId) continue
+    if (response.status && response.status !== 'waiting') continue
     ids.add(response.responderId)
   }
   ids.delete(authorId)

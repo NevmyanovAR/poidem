@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 
 interface Insets { top: number; bottom: number; left: number; right: number }
 interface TelegramWebApp {
+  openTelegramLink?: (url: string) => void
   initData?: string
   platform: string
   viewportStableHeight: number

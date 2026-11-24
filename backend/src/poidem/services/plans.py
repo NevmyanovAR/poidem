@@ -82,6 +82,8 @@ async def validate_fields(session, fields: PlanFields) -> None:
 
 
 def public_conditions(actor, at):
+    from poidem.services.archive import archived
+
     return (
         Plan.publication_status == "published",
         Plan.moderation_status.in_(VISIBLE_MODERATION),
@@ -90,6 +92,14 @@ def public_conditions(actor, at):
         User.account_status == "active",
         Profile.moderation_status.in_(VISIBLE_MODERATION),
         Category.enabled.is_(True),
+        ~archived(at),
+        ~select(PlanResponse.id)
+        .where(
+            PlanResponse.plan_id == Plan.id,
+            PlanResponse.responder_id == actor.user_id,
+            PlanResponse.status == "rejected",
+        )
+        .exists(),
     )
 
 
@@ -103,6 +113,8 @@ def joined_plans():
 
 
 def dto(row, actor) -> PlanDTO:
+    from poidem.services.archive import is_archived
+
     plan, name, image = row
     return PlanDTO(
         id=plan.id,
@@ -119,6 +131,8 @@ def dto(row, actor) -> PlanDTO:
         version=plan.version,
         image=image,
         own=plan.author_id == actor.user_id,
+        updated_at=plan.updated_at,
+        archived=is_archived(plan),
     )
 
 
@@ -251,6 +265,8 @@ async def create(session, actor, fields: PlanFields, key: uuid.UUID) -> tuple[Pl
 
 
 async def editable(session, actor, plan_id, expected):
+    from poidem.services.archive import is_archived
+
     await lock_actor(session, actor)
     await require_active(session, actor, profile=True)
     plan = await session.scalar(
@@ -260,6 +276,8 @@ async def editable(session, actor, plan_id, expected):
         raise AppError(404, "PLAN_NOT_FOUND", "Этот план не найден")
     if plan.version != expected:
         raise AppError(409, "PLAN_VERSION_CONFLICT", "План уже изменился — обнови страницу")
+    if is_archived(plan):
+        raise AppError(409, "PLAN_ARCHIVED", "Этот план уже в архиве")
     if await session.scalar(
         select(PlanResponse.id).where(PlanResponse.plan_id == plan.id).limit(1)
     ) or await session.scalar(select(Match.id).where(Match.plan_id == plan.id).limit(1)):
@@ -288,6 +306,7 @@ async def update(session, actor, plan_id, payload) -> PlanDTO:
         setattr(plan, key, value.astimezone(UTC) if key == "starts_at" else value)
     plan.moderation_status = "not_submitted"
     plan.version += 1
+    plan.updated_at = now()
     await session.commit()
     return await get_plan(session, actor, plan.id)
 
@@ -305,6 +324,8 @@ async def command(session, actor, plan_id, payload, action: str) -> PlanDTO:
         plan.moderation_status = "not_submitted"
     else:
         plan.publication_status = "cancelled"
+        plan.archived_at = now()
     plan.version += 1
+    plan.updated_at = now()
     await session.commit()
     return await get_plan(session, actor, plan.id)

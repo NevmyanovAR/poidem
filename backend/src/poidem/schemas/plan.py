@@ -81,6 +81,8 @@ class PlanDTO(BaseModel):
     version: int
     image: str
     own: bool
+    updated_at: datetime
+    archived: bool = False
 
 
 class PlanPage(BaseModel):

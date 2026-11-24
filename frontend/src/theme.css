@@ -29,6 +29,12 @@
   --border: color-mix(in srgb, var(--text-white) 30%, transparent);
   --surface-soft: color-mix(in srgb, var(--text-white) 2%, transparent);
   --surface-hover: color-mix(in srgb, var(--text-white) 4%, transparent);
+  --card-padding: 18px;
+  --card-column-gap: 16px;
+  --card-section-gap: 12px;
+  --card-action-gap: 8px 14px;
+  --card-title-size: clamp(26px, 3vw, 31px);
+  --card-meta-size: 11px;
   --focus-ring: color-mix(in srgb, var(--brand-light-blue) 35%, transparent);
   --shadow: color-mix(in srgb, var(--brand-burgundy) 45%, transparent);
   --shadow-strong: color-mix(in srgb, var(--brand-burgundy) 80%, transparent);

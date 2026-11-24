@@ -30,8 +30,17 @@ async function api(page: Page, options: { own?: TestPlan[]; catalog?: TestPlan[]
     expect(request.headers()['x-account-context']).toBe(actor)
     if (state.unavailable) return error('Планы временно недоступны', 503)
     if (path === '/api/v1/me/quotas') return json({ maximum: 3, used: state.used, remaining: 3 - state.used, day: tomorrow, time_zone: 'Europe/Moscow' })
+    if (path === '/api/v1/me/activity') {
+      const archived = new URL(request.url()).searchParams.get('scope') === 'archive'
+      return json({ items: state.own.filter(item => (item.publication_status === 'cancelled') === archived).map(plan => ({ key: `plan:${plan.id}`, kind: 'plan', plan_id: plan.id, archived, hidden: false, plan: { ...plan, archived }, response: null, match: null })), next_cursor: null })
+    }
     if (path === '/api/v1/me/plans') return json({ items: state.own, next_cursor: null })
+    if (path === '/api/v1/me/responses' || path === '/api/v1/me/matches') return json({ items: [], next_cursor: null })
     if (path === '/api/v1/plans' && method === 'GET') return json({ items: state.catalog, next_cursor: null })
+    const selected = [...state.own, ...state.catalog].find(item => path.startsWith(`/api/v1/plans/${item.id}`))
+    if (selected && path.endsWith('/author')) return json({ profile: { name: selected.author.name, age: 24, bio: 'Анкета только браузерного теста', interests: ['Искусство', 'Кофе', 'Прогулки'], photo: { url: '/images/gallery.jpeg' } } })
+    if (selected && path.endsWith('/capacity')) return json({ count: 0, maximum: 15, remaining: 15, can_respond: !selected.own, own_response_id: null })
+    if (selected && method === 'GET') return json({ plan: selected })
     if (path === '/api/v1/plans' && method === 'POST') {
       if (options.rejectContent) return json({ error: {
         code: 'PLAN_CONTENT_REJECTED', message: 'В планах нельзя предлагать наркотики, их покупку или употребление',
@@ -110,7 +119,8 @@ test('create, restore, publish, edit and cancel use the server without localStor
   expect(state.creations).toBe(1)
   await page.getByRole('button', { name: 'Отменить план', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Отменить план', exact: true }).click()
-  await expect(page.getByText('Отменён', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Архив', exact: true }).click()
+  await expect(page.getByText('Архив · Отменён', { exact: true })).toBeVisible()
   expect(state.used).toBe(1)
   expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain('Изменённый серверный план')
 })
@@ -124,7 +134,8 @@ test('catalogue shows only server offers, excludes the owner and has working det
   await expect(page.getByRole('heading', { name: 'Собственный план' })).toHaveCount(0)
   await expect(page.getByRole('switch')).toHaveCount(0)
   await page.locator('.plan-card').getByRole('link', { name: 'Пойдём?', exact: false }).click()
-  await expect(page.getByText('Отклики и мэтчи появятся на следующем этапе', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Синтетический участник/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Пойдём?', exact: true })).toBeEnabled()
   await expect(page.getByRole('link', { name: 'Все планы', exact: true })).toBeVisible()
 })
 

@@ -13,6 +13,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from poidem.db.base import Base, CreatedMixin, IdentityMixin
@@ -58,6 +59,10 @@ class Plan(IdentityMixin, CreatedMixin, Base):
     version: Mapped[int] = mapped_column(server_default="1")
     quota_charged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     quota_charged_day: Mapped[date | None] = mapped_column(Date)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     responses: Mapped[list["PlanResponse"]] = relationship(viewonly=True, lazy="raise")
 
 
@@ -82,19 +87,36 @@ class PlanResponse(IdentityMixin, CreatedMixin, Base):
             name="fk_plan_responses_plan_author",
             ondelete="RESTRICT",
         ),
-        UniqueConstraint("plan_id", "responder_id", name="uq_plan_responses_plan_responder"),
         UniqueConstraint(
             "id", "plan_id", "plan_author_id", "responder_id", name="uq_plan_responses_identity"
         ),
+        UniqueConstraint("plan_id", "responder_id", name="uq_plan_responses_plan_responder"),
         CheckConstraint("responder_id <> plan_author_id", name="not_author"),
         CheckConstraint("slot_no BETWEEN 1 AND 15 OR slot_no IS NULL", name="slot_range"),
         CheckConstraint("status <> 'waiting' OR slot_no IS NOT NULL", name="waiting_has_slot"),
         CheckConstraint("version > 0 AND agreed_plan_version > 0", name="versions_positive"),
         CheckConstraint(
             "(status = 'waiting' AND decision_actor_id IS NULL AND decided_at IS NULL) OR "
-            "(status IN ('accepted', 'declined') AND decision_actor_id = plan_author_id "
-            "AND decision_actor_id IS NOT NULL AND decided_at IS NOT NULL)",
+            "(status IN ('accepted', 'rejected') AND decision_actor_id = plan_author_id "
+            "AND decision_actor_id IS NOT NULL AND decided_at IS NOT NULL) OR "
+            "(status = 'closed' AND decision_actor_id IS NULL AND decided_at IS NOT NULL)",
             name="decision_by_author",
+        ),
+        CheckConstraint(
+            "status NOT IN ('rejected','closed') OR slot_no IS NULL", name="terminal_no_slot"
+        ),
+        Index(
+            "uq_plan_responses_active_person",
+            "plan_id",
+            "responder_id",
+            unique=True,
+            postgresql_where=text("status IN ('waiting','accepted')"),
+        ),
+        Index(
+            "uq_plan_responses_accepted_plan",
+            "plan_id",
+            unique=True,
+            postgresql_where=text("status = 'accepted'"),
         ),
         Index(
             "uq_plan_responses_occupied_slot",
@@ -111,7 +133,8 @@ class PlanResponse(IdentityMixin, CreatedMixin, Base):
     responder_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
     agreed_plan_version: Mapped[int]
     status: Mapped[str] = mapped_column(
-        state_type("response_status", "waiting", "accepted", "declined"), server_default="waiting"
+        state_type("response_status", "waiting", "accepted", "rejected", "closed"),
+        server_default="waiting",
     )
     slot_no: Mapped[int | None]
     version: Mapped[int] = mapped_column(server_default="1")
@@ -119,12 +142,14 @@ class PlanResponse(IdentityMixin, CreatedMixin, Base):
         ForeignKey("users.id", ondelete="RESTRICT")
     )
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    history_context: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
     match: Mapped["Match | None"] = relationship(viewonly=True, lazy="raise")
 
 
 class Match(IdentityMixin, CreatedMixin, Base):
     __tablename__ = "matches"
     __table_args__ = (
+        UniqueConstraint("plan_id", name="uq_matches_plan_id"),
         ForeignKeyConstraint(
             ["response_id", "plan_id", "author_id", "responder_id"],
             [

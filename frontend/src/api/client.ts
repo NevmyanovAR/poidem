@@ -1,5 +1,5 @@
 import { CATEGORY_CODES, INTEREST_CODES } from '../data/catalogs'
-import type { Plan, PlanInput, Profile, PublishedPlan } from '../types'
+import type { Plan, PlanInput, Profile, PublishedPlan, PlanResponse, PublicProfile, PairMatch, ResponseCapacity, MatchContact, ActivityPage, ActivityItem, ChatMessage, ChatState, MessagePage, ResponsePage } from '../types'
 import type { CreationQuota } from '../lib/planRules'
 
 interface PhotoDTO { id: string; url: string }
@@ -19,7 +19,26 @@ interface PlanDTO {
   description: string; starts_at: string; time_zone: string; place: string
   publication_status: NonNullable<Plan['publicationStatus']>; moderation_status: NonNullable<Plan['moderation']>['status']
   created_at: string; version: number; image: string; own: boolean
+  updated_at?: string; archived?: boolean
 }
+interface PublicProfileDTO { name: string; age: number; bio: string; interests: string[]; photo: { url: string } }
+interface ResponseDTO {
+  id: string; plan_id: string; plan: PlanDTO | null; status: PlanResponse['status']; version: number
+  created_at: string; profile: PublicProfileDTO | null; match_id: string | null
+  archived?: boolean
+  display_status: PlanResponse['displayStatus']; decided_at?: string | null
+  viewer_role: PlanResponse['viewerRole']
+  history_context?: { plan_title: string; author_name: string; responder_name: string; responder_age: number; captured_at: string; source: 'response' | 'legacy' } | null
+  match?: MatchDTO | null
+}
+interface MatchDTO {
+  id: string; plan_id: string; title: string; image: string; starts_at: string; time_zone: string
+  place: string; created_at: string; participants: { role: 'author' | 'responder'; profile: PublicProfileDTO | null }[]
+  unread_count?: number; archived?: boolean; meeting_cancelled?: boolean
+  viewer_role: PairMatch['viewerRole']
+}
+interface MessageDTO { id: string; sequence: number; sender: 'self' | 'other'; text: string; created_at: string; client_id: string | null }
+interface ChatDTO { match_id: string; last_sequence: number; last_read_sequence: number; other_last_read_sequence: number; unread_count: number; can_send: boolean; meeting_cancelled: boolean; archived: boolean }
 export class ApiError extends Error {
   code: string
   status: number
@@ -44,6 +63,7 @@ function planFromDTO(dto: PlanDTO): PublishedPlan {
     timeZone: dto.time_zone, startsAt: dto.starts_at, publicationStatus: dto.publication_status,
     label: statusLabels[dto.publication_status], published: dto.publication_status === 'published',
     createdAt: dto.created_at, serverVersion: dto.version,
+    updatedAt: dto.updated_at, archived: dto.archived ?? false,
     moderation: { status: dto.moderation_status, source: 'server' },
   }
 }
@@ -74,6 +94,124 @@ export class ApiClient {
   private hadSession = false
   private credentialEpoch = 0
   userId: string | null = null
+
+  private publicProfile(value: PublicProfileDTO | null): PublicProfile | null {
+    if (!value) return null
+    const origin = new URL(base || '/api/v1', window.location.origin).origin
+    return { ...value, photo: new URL(value.photo.url, origin).toString() }
+  }
+  private responseFromDTO(value: ResponseDTO): PlanResponse {
+    const history = value.history_context
+    return { id: value.id, planId: value.plan_id, plan: value.plan ? planFromDTO(value.plan) : null,
+      status: value.status, version: value.version, createdAt: value.created_at,
+      displayStatus: value.display_status ?? value.status, decidedAt: value.decided_at ?? null,
+      profile: this.publicProfile(value.profile), matchId: value.match_id, archived: value.archived ?? false,
+      viewerRole: value.viewer_role, match: value.match ? this.matchFromDTO(value.match) : null,
+      historyContext: history ? { planTitle: history.plan_title, authorName: history.author_name,
+        responderName: history.responder_name, responderAge: history.responder_age, capturedAt: history.captured_at, source: history.source } : null }
+  }
+  private matchFromDTO(value: MatchDTO): PairMatch {
+    return { id: value.id, planId: value.plan_id, title: value.title, image: value.image, startsAt: value.starts_at,
+      timeZone: value.time_zone, place: value.place, createdAt: value.created_at,
+      unreadCount: value.unread_count ?? 0, archived: value.archived ?? false, meetingCancelled: value.meeting_cancelled ?? false,
+      viewerRole: value.viewer_role,
+      participants: value.participants.map(p => ({ role: p.role, profile: this.publicProfile(p.profile) })) }
+  }
+
+  async activity(scope: 'active' | 'archive', includeHidden: boolean, cursor?: string): Promise<ActivityPage> {
+    const page = await this.request<{ items: { key: string; kind: ActivityItem['kind']; plan_id: string; archived: boolean; hidden: boolean; plan: PlanDTO | null; response: ResponseDTO | null; match: MatchDTO | null }[]; next_cursor: string | null }>(`/me/activity?scope=${scope}&include_hidden=${includeHidden}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`)
+    return { nextCursor: page.next_cursor, items: page.items.map(item => ({ key: item.key, kind: item.kind, planId: item.plan_id,
+      archived: item.archived, hidden: item.hidden, plan: item.plan ? planFromDTO(item.plan) : null,
+      response: item.response ? this.responseFromDTO(item.response) : null, match: item.match ? this.matchFromDTO(item.match) : null })) }
+  }
+  archiveVisibility(planId: string, hidden: boolean): Promise<void> {
+    return this.track(() => this.request(`/me/archive/${encodeURIComponent(planId)}/visibility`, { method: 'POST', body: JSON.stringify({ hidden }) }))
+  }
+  private chatFromDTO(value: ChatDTO): ChatState {
+    return { matchId: value.match_id, lastSequence: value.last_sequence, lastReadSequence: value.last_read_sequence,
+      otherLastReadSequence: value.other_last_read_sequence, unreadCount: value.unread_count, canSend: value.can_send,
+      meetingCancelled: value.meeting_cancelled, archived: value.archived }
+  }
+  private messageFromDTO(value: MessageDTO): ChatMessage {
+    return { id: value.id, sequence: value.sequence, sender: value.sender, text: value.text, createdAt: value.created_at, clientId: value.client_id }
+  }
+  async chat(id: string): Promise<ChatState> { return this.chatFromDTO(await this.request(`/matches/${encodeURIComponent(id)}/chat`)) }
+  async messages(id: string, direction?: { before?: number; after?: number }): Promise<MessagePage> {
+    const params = new URLSearchParams()
+    if (direction?.before !== undefined) params.set('before', String(direction.before))
+    if (direction?.after !== undefined) params.set('after', String(direction.after))
+    const page = await this.request<{ items: MessageDTO[]; next_before: number | null; has_more: boolean }>(`/matches/${encodeURIComponent(id)}/messages?${params}`)
+    return { items: page.items.map(value => this.messageFromDTO(value)), nextBefore: page.next_before, hasMore: page.has_more }
+  }
+  sendMessage(id: string, text: string, clientId: string): Promise<ChatMessage> {
+    return this.track(async () => { const value = await this.request<{ message: MessageDTO }>(`/matches/${encodeURIComponent(id)}/messages`, { method: 'POST', body: JSON.stringify({ text, client_id: clientId }) }); return this.messageFromDTO(value.message) })
+  }
+  readChat(id: string, sequence: number): Promise<ChatState> {
+    return this.track(async () => this.chatFromDTO(await this.request(`/matches/${encodeURIComponent(id)}/read`, { method: 'POST', body: JSON.stringify({ through_sequence: sequence }) })))
+  }
+
+  async plan(id: string): Promise<PublishedPlan> {
+    const value = await this.request<{ plan: PlanDTO }>(`/plans/${encodeURIComponent(id)}`)
+    return planFromDTO(value.plan)
+  }
+  async planAuthor(id: string): Promise<PublicProfile> {
+    const value = await this.request<{ profile: PublicProfileDTO }>(`/plans/${encodeURIComponent(id)}/author`)
+    return this.publicProfile(value.profile)!
+  }
+  async capacity(id: string): Promise<ResponseCapacity> {
+    const value = await this.request<{ count: number; maximum: number; remaining: number; can_respond: boolean; own_response_id: string | null }>(`/plans/${encodeURIComponent(id)}/capacity`)
+    return { count: value.count, maximum: value.maximum, remaining: value.remaining, canRespond: value.can_respond, ownResponseId: value.own_response_id }
+  }
+  async responses(direction: 'incoming' | 'outgoing'): Promise<PlanResponse[]> {
+    const result: PlanResponse[] = []; let cursor: string | null = null
+    const epoch = this.credentialEpoch
+    do {
+      if (epoch !== this.credentialEpoch || !this.userId) throw new ApiError('AUTH_CONTEXT_CHANGED', 'Аккаунт сменился')
+      const page: { items: ResponseDTO[]; next_cursor: string | null } = await this.request(`/me/responses?direction=${direction}&limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`)
+      result.push(...page.items.map(value => this.responseFromDTO(value))); cursor = page.next_cursor
+    } while (cursor)
+    return result
+  }
+  async planResponses(planId: string, cursor?: string): Promise<ResponsePage> {
+    const page = await this.request<{ items: ResponseDTO[]; next_cursor: string | null }>(`/plans/${encodeURIComponent(planId)}/responses?limit=20${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`)
+    return { items: page.items.map(value => this.responseFromDTO(value)), nextCursor: page.next_cursor }
+  }
+  async matches(): Promise<PairMatch[]> {
+    const result: PairMatch[] = []; let cursor: string | null = null
+    const epoch = this.credentialEpoch
+    do {
+      if (epoch !== this.credentialEpoch || !this.userId) throw new ApiError('AUTH_CONTEXT_CHANGED', 'Аккаунт сменился')
+      const page: { items: MatchDTO[]; next_cursor: string | null } = await this.request(`/me/matches?limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`)
+      result.push(...page.items.map(value => this.matchFromDTO(value))); cursor = page.next_cursor
+    } while (cursor)
+    return result
+  }
+  sendResponse(plan: Plan, key: string): Promise<PlanResponse> {
+    return this.track(async () => {
+      const value = await this.request<{ response: ResponseDTO }>(`/plans/${plan.id}/responses`, {
+        method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ expected_plan_version: plan.serverVersion }),
+      })
+      return this.responseFromDTO(value.response)
+    })
+  }
+  decideResponse(response: PlanResponse, decision: 'accept' | 'decline'): Promise<PlanResponse> {
+    return this.track(async () => {
+      const value = await this.request<{ response: ResponseDTO }>(`/responses/${response.id}/decision`, {
+        method: 'POST', body: JSON.stringify({ decision, expected_version: response.version }),
+      })
+      return this.responseFromDTO(value.response)
+    })
+  }
+  async match(id: string): Promise<PairMatch> {
+    const value = await this.request<{ match: MatchDTO }>(`/matches/${encodeURIComponent(id)}`)
+    return this.matchFromDTO(value.match)
+  }
+  async contact(id: string): Promise<MatchContact> {
+    const value = await this.request<{ available: boolean; telegram_url: string | null; reason: string | null }>(`/matches/${encodeURIComponent(id)}/contact`)
+    // Контакт — только безопасная публичная ссылка Telegram, без произвольных схем/параметров.
+    const url = value.telegram_url && /^https:\/\/t\.me\/[A-Za-z][A-Za-z0-9_]{0,63}$/u.test(value.telegram_url) ? value.telegram_url : null
+    return { available: value.available && !!url, telegramUrl: url, reason: value.reason }
+  }
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const epoch = this.credentialEpoch

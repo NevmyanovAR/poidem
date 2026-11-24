@@ -39,7 +39,7 @@ test('harmless words and user input are preserved', () => {
 test('response capacity excludes the author and deduplicates people across entries', () => {
   const records = [
     { id: 'a', planId: 'p', personId: 'one', responderId: 'one', direction: 'incoming', status: 'waiting' },
-    { id: 'b', planId: 'p', personId: 'one', responderId: 'one', direction: 'incoming', status: 'declined' },
+    { id: 'b', planId: 'p', personId: 'one', responderId: 'one', direction: 'incoming', status: 'rejected' },
     { id: 'c', planId: 'p', personId: 'author', responderId: 'author', direction: 'incoming', status: 'waiting' },
     { id: 'd', planId: 'other', personId: 'two', responderId: 'two', direction: 'incoming', status: 'waiting' },
   ]
@@ -50,6 +50,16 @@ test('response capacity excludes the author and deduplicates people across entri
   expect(full.count).toBe(15)
   expect(full.full).toBe(true)
   expect(full.alreadyResponded).toBe(false)
+})
+
+test('rejected and closed responses release the waiting capacity', () => {
+  const value = responseCapacity('p', 'owner', 'guest', [
+    { planId: 'p', responderId: 'guest', status: 'rejected' },
+    { planId: 'p', responderId: 'another', status: 'closed' },
+    { planId: 'p', responderId: 'new', status: 'waiting' },
+  ])
+  expect(value.count).toBe(1)
+  expect(value.alreadyResponded).toBe(false)
 })
 
 test('creation quota handles the third plan, duplicate IDs and the next local calendar day', () => {
