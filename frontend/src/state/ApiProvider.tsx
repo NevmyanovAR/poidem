@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ApiClient, ApiError } from '../api/client'
 import { getTelegramInitData } from '../lib/telegram'
@@ -7,6 +7,7 @@ import { emptyState } from './model'
 import { clearLegacyData } from '../lib/legacyStorage'
 import type { AuthorizationState, AppState, Profile, PublishedPlan, PlanResponse, PairMatch } from '../types'
 import { AppContext } from './context'
+import type { AppContextValue } from './context'
 
 const unavailableQuota = (): CreationQuota => ({ maximum: 3, used: 0, remaining: 0, day: '', timeZone: 'Europe/Moscow', ready: false })
 
@@ -148,6 +149,17 @@ export function ApiProvider({ children }: { children: ReactNode }) {
     if (!active.current || closing.current || epoch !== authEpoch.current) throw new ApiError('AUTH_CONTEXT_CHANGED', 'Аккаунт сменился')
     return result
   }, [authorization.status])
+  const safety = useMemo<AppContextValue['safety']>(() => ({
+    report: (...args) => readConnection(() => client.report(...args)),
+    block: (...args) => readConnection(() => client.block(...args)),
+    blocks: () => readConnection(() => client.blocks()),
+    unblock: id => readConnection(() => client.unblock(id)),
+    adminSession: () => readConnection(() => client.adminSession()),
+    adminReports: (...args) => readConnection(() => client.adminReports(...args)),
+    adminReport: id => readConnection(() => client.adminReport(id)),
+    adminDecision: (...args) => readConnection(() => client.adminDecision(...args)),
+    reportPhotoUrl: id => client.reportPhotoUrl(id),
+  }), [client, readConnection])
   const loadPlan = useCallback((id: string) => readConnection(() => client.plan(id)), [client, readConnection])
   const loadAuthor = useCallback((id: string) => readConnection(() => client.planAuthor(id)), [client, readConnection])
   const loadCapacity = useCallback((id: string) => readConnection(() => client.capacity(id)), [client, readConnection])
@@ -209,6 +221,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   }
 
   return <AppContext.Provider value={{
+    safety,
     data, plans: data.ownPlans, publishedPlans,
     authorization, busy, dailyQuota, plansLoading, plansError, planError,
     incomingResponses, outgoingResponses, matches, connectionsLoading, connectionsError, refreshConnections,

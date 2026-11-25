@@ -96,6 +96,9 @@ class BotHandler:
             return None
         words = (message.text or "").split(maxsplit=1)
         command = words[0].split("@")[0].lower() if words else ""
+        notification_link = (
+            not callback and command == "/start" and len(words) == 2 and words[1] == "notifications"
+        )
         enabled = {"/notifications_on": True, "/notifications_off": False}.get(command)
         settings_callback = callback and (callback.data or "").startswith("notify:")
         if callback:
@@ -111,7 +114,12 @@ class BotHandler:
             enabled = {"notify:on": True, "notify:off": False}.get(callback.data)
         user = await bot_bindings.interact(session, sender.id, message.chat.id, enabled)
         prompt = None
-        if settings_callback or enabled is not None or command == "/notifications":
+        if (
+            settings_callback
+            or enabled is not None
+            or command == "/notifications"
+            or notification_link
+        ):
             binding = await session.get(BotBinding, sender.id)
             profile_ready = user is not None and await session.get(Profile, user.id) is not None
             text, markup = notification_settings(

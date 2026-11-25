@@ -1,5 +1,7 @@
 # Проект схемы PostgreSQL
 
+D55: текущая Alembic head **0008**, по-прежнему 33 таблицы. reports расширена target_type/key, case_id и evidence JSONB; UNIQUE(reporter_id,target_key). user_restrictions различает administrative/personal и имеет уникальную активную направленную блокировку с парным lifted_at/by. Старые записи сохранены. moderation_cases/decisions и admin_audit_log используются для ручных решений; никаких автоудалений. [Подробности и миграция](SAFETY_STAGE7.md)
+
 D53 / revision 0007: без новых таблиц. В bot_bindings добавлен notifications_enabled; в survey_recipients — comment_prompt_message_id; частичный индекс notification_jobs(lease_until) для leased. Jobs/updates/опросы используют прежние ограничения/связи. Нет seed/очистки/автоматической рассылки старым мэтчам. [Данные и политика](BOT_STAGE6.md#модели-миграция-и-api)
 
 D51 / revision 0006: прежние 33 таблицы, nullable JSONB plan_responses.history_context с минимальными разрешёнными полями. Новые снимки — при отправке; старые доступные записи один раз помечены source=legacy по отдельному согласию пользователя. Никакие строки/фото/планы не удаляются. [Миграция и ограничения](CARDS_UX_REVIEW.md#изменённые-данные-и-api)

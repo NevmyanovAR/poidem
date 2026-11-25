@@ -5,6 +5,7 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import func, select
@@ -108,7 +109,12 @@ def test_chat_history_pagination_read_receipts_and_reopening(members):
     assert b.get("/api/v1/me/matches").json()["items"][0]["unread_count"] == 2
 
 
-def test_message_idempotency_concurrency_validation_and_rate_limit(members, migration_engine):
+def test_message_idempotency_concurrency_validation_and_rate_limit(
+    members, migration_engine, monkeypatch
+):
+    # Все запросы проверяют одно минутное окно, независимо от времени старта pytest.
+    fixed_time = time.time()
+    monkeypatch.setattr("poidem.services.rate_limit.time", SimpleNamespace(time=lambda: fixed_time))
     (a, aa), _ = members
     _, match_id = paired(members)
     key = uuid.uuid4()

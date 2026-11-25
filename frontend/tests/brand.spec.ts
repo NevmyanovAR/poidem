@@ -76,10 +76,9 @@ test('approved palette across routes, both profile steps and interaction states'
     await checkColors(page)
     await page.goto('/match/missing')
     await checkColors(page)
-    await page.getByRole('button', { name: 'Очистить данные', exact: true }).click()
-    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Очистить данные', exact: true })).toHaveCount(0)
+    await page.goto('/settings')
     await checkColors(page)
-    await page.getByRole('button', { name: 'Понятно', exact: true }).click()
     await page.goto('/plans')
     await checkColors(page)
   }

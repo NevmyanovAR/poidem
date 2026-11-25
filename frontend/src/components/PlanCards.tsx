@@ -8,6 +8,7 @@ import type { PairMatch, Plan, PlanResponse } from '../types'
 import { Photo } from './ui'
 import { ModerationStatus } from './TrustStatus'
 import { ArchiveResponseHistory, ResponseHistoryEntry } from './ResponseHistory'
+import { SafetyMenu } from './SafetyMenu'
 
 function ActionArrow() { return <span className="action-arrow" aria-hidden="true"><ArrowRight size={16} /></span> }
 function CardFrame({ photo, alt = '', kind, children }: { photo?: string; alt?: string; kind: string; children: ReactNode }) {
@@ -41,7 +42,7 @@ function PendingResponseCard({ response, onChange }: { response: PlanResponse; o
   const profile = response.profile
   return <CardFrame photo={profile?.photo ?? response.plan?.image} alt={profile?.name ?? 'Иллюстрация плана'} kind={incoming ? 'incoming' : 'outgoing'}>
     <div className="record-heading"><span className="plan-status">{incoming ? 'Полученный отклик' : 'Ожидает ответа'}</span><h2>{response.plan?.title ?? response.historyContext?.planTitle ?? 'План недоступен'}</h2></div>
-    {profile && <p className="record-person">{profile.name}, {profile.age}</p>}
+    {profile && <div className="record-person-row"><p className="record-person">{profile.name}, {profile.age}</p><SafetyMenu label="Действия с анкетой" personName={profile.name} context={{ target_type: 'profile', context_type: 'response', context_id: response.id }} allowBlock onBlocked={onChange} /></div>}
     {response.plan && <MeetingMeta value={response.plan} />}
     {profile && <div className="record-additional"><p className="review-description">{profile.bio}</p><div className="interest-tags">{profile.interests.map(interest => <span className="chip" key={interest}>{interest}</span>)}</div></div>}
     {!!actions.length && <div className="plan-actions">

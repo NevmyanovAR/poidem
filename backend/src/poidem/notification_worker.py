@@ -31,7 +31,7 @@ from poidem.db.models import (
     SurveyRecipient,
     User,
 )
-from poidem.services import archive, plans, surveys
+from poidem.services import archive, plans, safety, surveys
 from poidem.services.notifications import retry_delay
 
 logger = logging.getLogger(__name__)
@@ -96,6 +96,8 @@ async def payload(session, entry, binding, settings):
             return None
         plan = await session.get(Plan, match.plan_id)
         other_id = match.responder_id if entry.recipient_id == match.author_id else match.author_id
+        if await safety.blocked(session, match.author_id, match.responder_id):
+            return None
         other = await session.get(User, other_id)
         if (
             other.account_status != "active"
@@ -133,6 +135,8 @@ async def payload(session, entry, binding, settings):
         return chat_message(plan.title), open_app(settings, f"match/{match.id}/chat", "Открыть чат")
     response = await session.get(PlanResponse, uuid.UUID(entry.entity_ref["response_id"]))
     if not response:
+        return None
+    if await safety.blocked(session, response.plan_author_id, response.responder_id):
         return None
     plan = await session.get(Plan, response.plan_id)
     if not plan or plan.moderation_status not in plans.VISIBLE_MODERATION:
@@ -267,6 +271,31 @@ class NotificationWorker:
                     lease, "retry", "cooldown", retry_at=plans.now() + timedelta(seconds=1)
                 )
                 return True
+            async with self.database.sessions() as session:
+                job = await session.get(NotificationJob, lease.identity)
+                pair = None
+                try:
+                    if job and job.kind == "chat_message":
+                        match = await session.get(Match, uuid.UUID(job.entity_ref["match_id"]))
+                        if match:
+                            pair = (match.author_id, match.responder_id)
+                    elif job and job.kind.startswith("response_"):
+                        response = await session.get(
+                            PlanResponse, uuid.UUID(job.entity_ref["response_id"])
+                        )
+                        if response:
+                            pair = (response.plan_author_id, response.responder_id)
+                except (KeyError, ValueError, TypeError):
+                    # Повреждённый job обработает прежний ограниченный retry в deliver.
+                    pass
+            if pair:
+                async with advisory_lock(self.database, safety.pair_key(*pair)) as pair_acquired:
+                    if not pair_acquired:
+                        await self.finish(
+                            lease, "retry", "cooldown", retry_at=plans.now() + timedelta(seconds=1)
+                        )
+                        return True
+                    return await self.deliver(lease)
             return await self.deliver(lease)
 
     async def deliver(self, lease):

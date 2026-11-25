@@ -72,7 +72,7 @@ export function useTelegram() {
 
   useEffect(() => observeTelegram(app => {
     if (!app.isVersionAtLeast('6.1')) return
-    const back = () => navigate(pathname.startsWith('/people/') ? '/catalog' : pathname === '/profile' ? '/' : '/home')
+    const back = () => navigate(pathname === '/settings' ? '/profile' : pathname === '/settings/blocked' || pathname === '/admin' ? '/settings' : pathname.startsWith('/people/') ? '/catalog' : pathname === '/profile' ? '/' : '/home')
     if (pathname === '/' || pathname === '/home') app.BackButton.hide()
     else app.BackButton.show()
     app.BackButton.onClick(back)

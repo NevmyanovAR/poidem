@@ -8,6 +8,7 @@ import { ApiError } from '../api/client'
 import { meetingDateLabel } from '../lib/date'
 import { matchPartner } from '../lib/recordActions'
 import { ArchiveResponseHistory } from '../components/ResponseHistory'
+import { SafetyMenu } from '../components/SafetyMenu'
 
 export function Match() {
   const { inviteId = '' } = useParams()
@@ -42,7 +43,7 @@ export function Match() {
   const { match, contact } = screen
   const partner = matchPartner(match)
   return <section className="match-page">
-    <div className="match-heading"><span className="eyebrow">Вы выбрали друг друга</span><h1>Кажется, вам <em>по пути</em></h1><Glasses /></div>
+    <div className="match-heading"><SafetyMenu personName={partner?.name} context={{ target_type: 'match', context_type: 'match', context_id: match.id }} allowBlock onBlocked={() => void reload()} /><span className="eyebrow">Вы выбрали друг друга</span><h1>Кажется, вам <em>по пути</em></h1><Glasses /></div>
     <div className="match-portraits">{match.participants.map((part, index) => <Fragment key={part.role}><div className={`match-portrait ${index ? 'second' : 'first'}`}>{part.profile ? <Photo src={part.profile.photo} alt={part.profile.name} eager /> : <div className="match-photo-unavailable">Анкета недоступна</div>}<span title={part.profile?.name}>{part.profile?.name ?? 'Участник'}</span></div>{index === 0 && <Heart className="match-heart" size={30} />}</Fragment>)}</div>
     <p className="match-description">План есть. Пара тоже. Осталось договориться о деталях</p>
     <div className="match-plan"><Photo src={match.image} alt={match.title} /><div><span className="eyebrow">Ваш план</span><h2>{match.title}</h2><p><CalendarDays size={15} />{meetingDateLabel(match)}</p><p><MapPin size={15} />{match.place}</p></div></div>

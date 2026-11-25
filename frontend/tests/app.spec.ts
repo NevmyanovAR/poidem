@@ -121,17 +121,17 @@ test('navigation, all image assets, mobile and desktop layout', async ({ page })
   expect(errors).toEqual([])
 })
 
-test('legacy corrupt data is ignored and explicit reset preserves the server-account boundary', async ({ page }) => {
+test('legacy corrupt data is ignored and no user-facing reset can erase data', async ({ page }) => {
   await page.goto('/home')
   await page.evaluate(() => localStorage.setItem('poidem:demo:v1', '{broken'))
   await page.reload()
   await expect(page.getByRole('heading', { name: /Куда/ })).toBeVisible()
   expect(await page.evaluate(() => localStorage.getItem('poidem:demo:v1'))).toBe('{broken')
-  await page.getByRole('button', { name: 'Очистить данные', exact: true }).click()
-  await expect(page.getByRole('dialog')).toContainText('Серверные анкета и планы сохранятся')
-  await page.getByRole('dialog').getByRole('button', { name: 'Очистить', exact: true }).click()
-  expect(await page.evaluate(() => localStorage.getItem('poidem:demo:v1'))).toBeNull()
-  await expect(page.getByText('Данные на устройстве очищены. Серверные анкета и планы сохранены', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Очистить данные', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.goto('/settings')
+  expect(await page.evaluate(() => localStorage.getItem('poidem:demo:v1'))).toBe('{broken')
+
 })
 
 test('Telegram bridge adapts safe area, viewport and native back button without authentication', async ({ page }) => {

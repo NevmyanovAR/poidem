@@ -1,8 +1,10 @@
 import { createContext, useContext } from 'react'
+import type { ApiClient } from '../api/client'
 import type { AuthorizationState, AppState, Plan, PlanInput, Profile, PublishedPlan, PublicProfile, PairMatch, PlanResponse, ResponseCapacity, MatchContact, ActivityPage, ChatState, ChatMessage, MessagePage, ResponsePage } from '../types'
 import type { CreationQuota } from '../lib/planRules'
 
 export interface AppContextValue {
+  safety: Pick<ApiClient, 'report' | 'block' | 'blocks' | 'unblock' | 'adminSession' | 'adminReports' | 'adminReport' | 'adminDecision' | 'reportPhotoUrl'>
   data: AppState
   plans: Plan[]
   publishedPlans: PublishedPlan[]

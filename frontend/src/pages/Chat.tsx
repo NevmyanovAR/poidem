@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Send } from 'lucide-react'
 import { useAppData } from '../state/context'
 import { EmptyState } from '../components/ui'
+import { SafetyMenu } from '../components/SafetyMenu'
+import { matchPartner } from '../lib/recordActions'
 import type { ChatMessage, ChatState } from '../types'
 
 function mergeMessages(previous: ChatMessage[], next: ChatMessage[]) {
@@ -20,7 +22,9 @@ export function Chat() {
 }
 
 function ChatConversation({ id }: { id: string }) {
-  const { loadChat, loadMessages, sendMessage, readChat } = useAppData()
+  const { loadChat, loadMessages, sendMessage, readChat, matches } = useAppData()
+  const currentMatch = matches.find(pair => pair.id === id)
+  const partner = currentMatch ? matchPartner(currentMatch) : null
   const [state, setState] = useState<ChatState | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [before, setBefore] = useState<number | null>(null)
@@ -69,7 +73,7 @@ function ChatConversation({ id }: { id: string }) {
   }, [refresh])
   return <section className="chat-page">
     <Link className="back-link" to={`/match/${id}`}><ArrowLeft size={16} />К вашему мэтчу</Link>
-    <h1>Ваша <em>переписка</em></h1>
+    <div className="screen-heading"><h1>Ваша <em>переписка</em></h1>{state && <SafetyMenu personName={partner?.name ?? 'участника этой переписки'} context={{ target_type: 'chat', context_type: 'match', context_id: id }} allowBlock onBlocked={() => void refresh()} />}</div>
     {state?.meetingCancelled && <p className="waiting-panel" role="status">Встреча отменена. Переписка сохранена</p>}
     {state?.archived && <p className="small-note">План в архиве. Ваша история сообщений сохранена</p>}
     {error && <div role="alert" className="field-error">{error} <button className="text-link" type="button" onClick={() => void refresh()}>Повторить загрузку</button></div>}
@@ -112,7 +116,7 @@ function ChatConversation({ id }: { id: string }) {
       <textarea id="chat-text" value={draft} maxLength={2000} rows={3} disabled={!state?.canSend || sending} placeholder="Напиши что-нибудь…" onChange={event => setDraft(event.target.value)} />
       <div className="chat-compose-actions"><span className="small-note">{draft.length} / 2000</span><button className="button button-primary" type="submit" disabled={sending || !state?.canSend || !draft.trim()}><Send size={17} />{sending ? 'Отправляем…' : 'Отправить'}</button></div>
       {sendError && <p role="alert" className="field-error">{sendError}</p>}
-      {state && !state.canSend && <p className="small-note">Отправка сообщений в этой переписке ограничена</p>}
+      {state && !state.canSend && <p className="small-note">Переписка недоступна</p>}
     </form>
   </section>
 }

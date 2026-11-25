@@ -1,7 +1,17 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Text, func
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from poidem.db.base import Base, CreatedMixin, IdentityMixin
@@ -59,6 +69,7 @@ class Report(IdentityMixin, CreatedMixin, Base):
     __table_args__ = (
         CheckConstraint("num_nonnulls(reported_user_id, plan_id) = 1", name="exactly_one_target"),
         Index("ix_reports_state_created", "state", "created_at"),
+        UniqueConstraint("reporter_id", "target_key", name="uq_reports_reporter_target"),
     )
     reporter_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
@@ -71,6 +82,13 @@ class Report(IdentityMixin, CreatedMixin, Base):
     )
     reason_code: Mapped[str] = mapped_column(Text)
     comment: Mapped[str | None] = mapped_column(Text)
+    target_key: Mapped[str | None] = mapped_column(Text)
+    target_type: Mapped[str] = mapped_column(Text, server_default="legacy")
+    case_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("moderation_cases.id", ondelete="RESTRICT"), index=True
+    )
+    # Только разрешённый контекст, а не свободный доступ к переписке.
+    evidence: Mapped[dict] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
     state: Mapped[str] = mapped_column(
         state_type("report_state", "pending", "reviewed"), server_default="pending"
     )
@@ -81,12 +99,22 @@ class UserRestriction(IdentityMixin, Base):
     __table_args__ = (
         CheckConstraint("(lifted_at IS NULL) = (lifted_by IS NULL)", name="lift_pair"),
         CheckConstraint("lifted_at IS NULL OR lifted_at >= imposed_at", name="lift_after_impose"),
+        CheckConstraint("kind IN ('administrative','personal')", name="kind_valid"),
+        CheckConstraint("kind <> 'personal' OR user_id <> imposed_by", name="personal_not_self"),
+        Index(
+            "uq_personal_block_active",
+            "imposed_by",
+            "user_id",
+            unique=True,
+            postgresql_where=text("kind = 'personal' AND lifted_at IS NULL"),
+        ),
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), index=True
     )
     imposed_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
     reason: Mapped[str] = mapped_column(Text)
+    kind: Mapped[str] = mapped_column(Text, server_default="administrative")
     imposed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     lifted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     lifted_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))

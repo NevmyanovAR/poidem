@@ -6,7 +6,7 @@ from poidem.api.errors import AppError
 from poidem.db.models import ChatMessage, ChatReadState, ChatThread, Plan, User
 from poidem.schemas.chat import ChatDTO, MessageDTO, MessagePage
 from poidem.security.session import lock_actor
-from poidem.services import archive, connections, notifications, plans
+from poidem.services import archive, connections, notifications, plans, safety
 from poidem.services.rate_limit import rate_limit
 
 
@@ -66,6 +66,7 @@ async def state(session, actor, match_id):
         other_last_read_sequence=reads.get("responder" if role == "author" else "author", 0),
         unread_count=await unread(session, actor, match),
         can_send=other.account_status == "active"
+        and not await safety.blocked(session, match.author_id, match.responder_id)
         and plan.moderation_status in plans.VISIBLE_MODERATION,
         meeting_cancelled=plan.publication_status == "cancelled",
         archived=is_archived,
@@ -132,6 +133,7 @@ async def send(session, actor, match_id, payload, maximum):
             )
         return message_dto(previous, actor), False
     other_id = match.responder_id if actor.user_id == match.author_id else match.author_id
+    await safety.require_interaction(session, actor.user_id, other_id)
     other = await session.get(User, other_id)
     plan = await session.get(Plan, match.plan_id)
     if other.account_status != "active" or plan.moderation_status not in plans.VISIBLE_MODERATION:

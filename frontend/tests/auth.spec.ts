@@ -61,13 +61,14 @@ test('automatic Telegram login saves, restores and edits a real isolated profile
   await page.getByRole('button', { name: 'Сохранить анкету', exact: true }).click()
   await expect(page.getByText('Изменённая анкета А, какой у тебя план?', { exact: true })).toBeVisible()
   await page.goto('/profile')
+  await page.getByRole('link', { name: 'Настройки', exact: true }).click()
   await page.getByRole('button', { name: 'Удалить аккаунт', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Удалить аккаунт', exact: true }).click()
   await expect(page).toHaveURL('/')
   expect((await context.request.get('/api/v1/me')).status()).toBe(401)
 })
 
-test('two browser contexts cannot read each other and local reset preserves the server profile', async ({ browser }) => {
+test('two browser contexts stay isolated through settings navigation', async ({ browser }) => {
   const first = await browser.newContext({ baseURL: 'http://127.0.0.1:4173' })
   const second = await browser.newContext({ baseURL: 'http://127.0.0.1:4173' })
   try {
@@ -77,8 +78,9 @@ test('two browser contexts cannot read each other and local reset preserves the 
     const ownA = (await (await first.request.get('/api/v1/me')).json()).profile
     expect((await second.request.get(ownA.photo.url)).status()).toBe(404)
     await a.goto('/profile')
-    await a.getByRole('button', { name: 'Очистить данные', exact: true }).click()
-    await a.getByRole('dialog').getByRole('button', { name: 'Очистить', exact: true }).click()
+    await a.getByRole('link', { name: 'Настройки', exact: true }).click()
+    await expect(a.getByRole('button', { name: 'Очистить данные', exact: true })).toHaveCount(0)
+    await a.getByRole('link', { name: 'К анкете', exact: true }).click()
     await a.reload()
     await expect(a.getByRole('textbox', { name: 'Твоё имя' })).toHaveValue('Аккаунт А')
     expect((await first.request.get('/api/v1/me')).status()).toBe(200)

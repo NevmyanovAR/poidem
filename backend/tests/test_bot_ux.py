@@ -13,7 +13,7 @@ from aiogram.exceptions import (
 from aiogram.methods import EditMessageText
 from bot_helpers import bot_settings as bot_settings
 from bot_helpers import callback, message, run
-from sqlalchemy import update
+from sqlalchemy import select, update
 from test_accounts import clients as clients
 from test_accounts import headers, login
 from test_connections import decide, published, respond
@@ -24,6 +24,24 @@ from poidem.db.models import BotBinding, TelegramUpdate, User
 from poidem.services import plans
 
 pytestmark = pytest.mark.database
+
+
+def test_settings_deep_link_opens_existing_preferences_without_enabling_them(
+    clients, bot_settings, migration_engine
+):
+    login(clients(), 101)
+
+    async def check(database, bot, handler, worker):
+        await handler.process(message(1, 101, "/notifications_off"))
+        await handler.process(message(2, 101, "/start notifications"))
+        assert "<b>Уведомления выключены</b>" in bot.sent[-1]["text"]
+        assert bot.sent[-1]["reply_markup"].inline_keyboard[0][0].callback_data == "notify:on"
+        await handler.process(message(3, 101, "/start unknown"))
+        assert "<b>Пойдём?</b>" in bot.sent[-1]["text"]
+
+    run(bot_settings, check)
+    with migration_engine.connect() as connection:
+        assert connection.scalar(select(BotBinding.notifications_enabled)) is False
 
 
 @pytest.mark.parametrize(

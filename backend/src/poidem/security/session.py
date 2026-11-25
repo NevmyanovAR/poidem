@@ -71,7 +71,9 @@ async def lock_actor(session: AsyncSession, actor: Principal, *, active: bool = 
     user = await session.scalar(
         select(User)
         .where(User.id == actor.user_id)
-        .with_for_update()
+        # Сериализуем изменения аккаунта, но разрешаем FK KEY SHARE другой стороны.
+        # FOR UPDATE создавал цикл user A → pair → FK user B при блокировке/чате.
+        .with_for_update(key_share=True)
         .execution_options(populate_existing=True)
     )
     auth = await session.scalar(

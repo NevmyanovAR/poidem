@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { ArrowLeft, ArrowRight, CalendarDays, MapPin, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { SafetyMenu } from './SafetyMenu'
 import type { PublishedPlan } from '../types'
 import { ModerationStatus } from './TrustStatus'
 import { meetingDateLabel } from '../lib/date'
@@ -29,11 +30,11 @@ export function PageHeading({ eyebrow, title, italic, children, back }: { eyebro
 
 export function PlanCard({ plan, onSelect }: { plan: PublishedPlan; onSelect?: () => void }) {
   return <article className="plan-card">
-    <Link className="card-photo" to={`/people/${plan.id}`} onClick={onSelect} aria-label={`Выбрать план «${plan.title}»`}>
+    <div className="plan-photo-frame"><Link className="card-photo" to={`/people/${plan.id}`} onClick={onSelect} aria-label={`Выбрать план «${plan.title}»`}>
       <Photo src={plan.image} alt={plan.title} />
       <span className="photo-tag">{plan.label}</span>
       <span className="photo-arrow"><ArrowRight size={21} /></span>
-    </Link>
+    </Link>{!plan.own && <SafetyMenu label="Действия с планом" personName={plan.author.name} context={{ target_type: 'plan', context_type: 'plan', context_id: plan.id }} allowBlock />}</div>
     <div className="plan-content"><span className="eyebrow card-category">{plan.category}</span><h2><Link to={`/people/${plan.id}`} onClick={onSelect}>{plan.title}</Link></h2>
       <p className="plan-meta"><CalendarDays size={15} />{meetingDateLabel(plan)}</p>
       <p className="plan-meta"><MapPin size={15} />{plan.place}</p>
@@ -46,8 +47,8 @@ export function EmptyState({ title, children, action, to }: { title: string; chi
   return <div className="empty-state"><div className="empty-art"><Glasses /></div><h2>{title}</h2><p>{children}</p><Link className="button button-primary" to={to}>{action}<ArrowRight size={18} /></Link></div>
 }
 
-export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+export function Modal({ title, children, onClose, closeLabel = 'Понятно', className = '', decoration = true }: { title: string; children: ReactNode; onClose: () => void; closeLabel?: string; className?: string; decoration?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => { const dialog = ref.current; dialog?.showModal(); return () => dialog?.close() }, [])
-  return <dialog ref={ref} className="modal" onCancel={onClose} onClick={e => { if (e.target === e.currentTarget) onClose() }} aria-labelledby="modal-title"><div className="modal-content"><Sparkles className="sky" size={30} /><h2 id="modal-title">{title}</h2>{children}<button className="button button-primary" onClick={onClose}>Понятно</button></div></dialog>
+  return <dialog ref={ref} className={`modal ${className}`} onCancel={event => { event.preventDefault(); onClose() }} onClick={e => { if (e.target === e.currentTarget) onClose() }} aria-labelledby="modal-title"><div className="modal-content">{decoration && <Sparkles className="sky" size={30} />}<h2 id="modal-title">{title}</h2>{children}<button type="button" className="button button-primary" onClick={onClose}>{closeLabel}</button></div></dialog>
 }

@@ -83,12 +83,14 @@ async def validate_fields(session, fields: PlanFields) -> None:
 
 def public_conditions(actor, at):
     from poidem.services.archive import archived
+    from poidem.services.safety import hidden_author_expression
 
     return (
         Plan.publication_status == "published",
         Plan.moderation_status.in_(VISIBLE_MODERATION),
         Plan.starts_at > at,
         Plan.author_id != actor.user_id,
+        ~hidden_author_expression(actor.user_id, Plan.author_id),
         User.account_status == "active",
         Profile.moderation_status.in_(VISIBLE_MODERATION),
         Category.enabled.is_(True),

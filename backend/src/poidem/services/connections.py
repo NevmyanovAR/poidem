@@ -29,7 +29,7 @@ from poidem.schemas.connections import (
     ResponsePage,
 )
 from poidem.security.session import lock_actor
-from poidem.services import candidates, notifications, plans, surveys
+from poidem.services import candidates, notifications, plans, safety, surveys
 
 ACTIVE = ("waiting", "accepted")
 
@@ -67,6 +67,8 @@ async def response_profile(session, actor, entry):
     await plans.require_active(session, actor)
     if entry.status not in ACTIVE:
         raise candidates.not_found()
+    if await safety.blocked(session, entry.plan_author_id, entry.responder_id):
+        raise candidates.not_found()
     plan = await session.get(Plan, entry.plan_id)
     if not plan or plan.moderation_status not in plans.VISIBLE_MODERATION:
         raise candidates.not_found()
@@ -96,12 +98,17 @@ async def response_dto(session, actor, entry):
         if error.status_code != 404:
             raise
     match = await session.scalar(select(Match).where(Match.response_id == entry.id))
+    display_status = response_display_status(entry, plan, plans.now())
+    if display_status == "waiting" and await safety.blocked(
+        session, entry.plan_author_id, entry.responder_id
+    ):
+        display_status = "unavailable"
     return ResponseDTO(
         id=entry.id,
         plan_id=entry.plan_id,
         plan=plans.dto(row, actor) if visible else None,
         status=entry.status,
-        display_status=response_display_status(entry, plan, plans.now()),
+        display_status=display_status,
         version=entry.version,
         created_at=entry.created_at,
         decided_at=entry.decided_at,
@@ -147,6 +154,8 @@ async def capacity(session, actor, plan_id):
     )
     allowed = not plan.own and own is None and count < 15 and plan.publication_status == "published"
     if allowed:
+        allowed = not await safety.blocked(session, actor.user_id, plan.author.id)
+    if allowed:
         try:
             await candidates.public_profile(session, actor.user_id, "")
             await candidates.public_profile(session, plan.author.id, "")
@@ -184,6 +193,7 @@ async def send(session, actor, plan_id, payload, key):
         raise missing()
     if plan.author_id == actor.user_id:
         raise AppError(409, "OWN_PLAN_RESPONSE", "Нельзя откликнуться на собственный план")
+    await safety.require_interaction(session, actor.user_id, plan.author_id)
     previous = await session.scalar(
         select(PlanResponse).where(
             PlanResponse.plan_id == plan_id, PlanResponse.responder_id == actor.user_id
@@ -276,6 +286,7 @@ async def decide(session, actor, response_id, payload):
         return await response_dto(session, actor, entry)
     if entry.status != "waiting":
         raise AppError(409, "RESPONSE_ALREADY_DECIDED", "Ответ уже изменился — обнови список")
+    await safety.require_interaction(session, actor.user_id, entry.responder_id)
     if entry.version != payload.expected_version:
         raise AppError(409, "RESPONSE_VERSION_CONFLICT", "Отклик изменился — обнови список")
     if plan.publication_status != "published" or plan.starts_at <= plans.now():
@@ -439,6 +450,8 @@ async def match_photo(session, actor, match_id, role):
 
 async def contact(session, actor, match_id):
     entry = await match_record(session, actor, match_id)
+    if await safety.blocked(session, entry.author_id, entry.responder_id):
+        return ContactDTO(available=False, reason="unavailable")
     plan = await session.get(Plan, entry.plan_id)
     if plan.moderation_status not in plans.VISIBLE_MODERATION:
         raise missing()

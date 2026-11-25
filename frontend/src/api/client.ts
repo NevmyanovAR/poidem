@@ -1,6 +1,7 @@
 import { CATEGORY_CODES, INTEREST_CODES } from '../data/catalogs'
 import type { Plan, PlanInput, Profile, PublishedPlan, PlanResponse, PublicProfile, PairMatch, ResponseCapacity, MatchContact, ActivityPage, ActivityItem, ChatMessage, ChatState, MessagePage, ResponsePage } from '../types'
 import type { CreationQuota } from '../lib/planRules'
+import type { BlockedUser, ReportDetail, ReportReason, SafetyContext, SafetyReport, SafetyTarget } from './safety'
 
 interface PhotoDTO { id: string; url: string }
 interface ProfileDTO {
@@ -85,6 +86,31 @@ const configured = import.meta.env.VITE_API_BASE_URL?.trim()
 const base = configured || (import.meta.env.DEV ? '/api/v1' : '')
 
 export class ApiClient {
+  report(context: SafetyContext, reason_code: ReportReason, comment: string): Promise<SafetyReport> {
+    return this.track(() => this.request('/reports', { method: 'POST', body: JSON.stringify({ ...context, reason_code, comment: comment.trim() || null }) }))
+  }
+  block(context: SafetyContext): Promise<{ id: string; blocked: boolean }> {
+    return this.track(() => this.request('/me/blocks', { method: 'POST', body: JSON.stringify(context) }))
+  }
+  async blocks(): Promise<{ items: BlockedUser[] }> {
+    const page = await this.request<{ items: BlockedUser[] }>('/me/blocks')
+    const origin = new URL(base || '/api/v1', window.location.origin).origin
+    return { items: page.items.map(item => ({ ...item, photo_url: item.photo_url ? new URL(item.photo_url, origin).toString() : null })) }
+  }
+  unblock(id: string): Promise<void> { return this.track(() => this.request(`/me/blocks/${encodeURIComponent(id)}`, { method: 'DELETE' })) }
+  adminSession(): Promise<{ role: 'admin' }> { return this.request('/admin/session') }
+  adminReports(state: string, target: string, cursor?: string): Promise<{ items: SafetyReport[]; next_cursor: string | null }> {
+    const params = new URLSearchParams()
+    if (state) params.set('state', state)
+    if (target) params.set('target_type', target as SafetyTarget)
+    if (cursor) params.set('cursor', cursor)
+    return this.request(`/admin/reports?${params}`)
+  }
+  adminReport(id: string): Promise<ReportDetail> { return this.request(`/admin/reports/${encodeURIComponent(id)}`) }
+  adminDecision(id: string, action: 'dismiss' | 'hide_plan', reason: string): Promise<ReportDetail> {
+    return this.track(() => this.request(`/admin/reports/${encodeURIComponent(id)}/decision`, { method: 'POST', body: JSON.stringify({ action, reason }) }))
+  }
+  reportPhotoUrl(id: string): string { return `${base}/admin/reports/${encodeURIComponent(id)}/photo` }
   private csrf = ''
   private authFlight: Promise<AccountDTO | null> | null = null
   private authRaw = ''

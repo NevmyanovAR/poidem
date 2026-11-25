@@ -5,6 +5,7 @@ import { EmptyState, Photo } from '../components/ui'
 import { useAppData } from '../state/context'
 import type { PublicProfile, PublishedPlan, ResponseCapacity } from '../types'
 import { meetingDateLabel } from '../lib/date'
+import { SafetyMenu } from '../components/SafetyMenu'
 
 export function People() {
   const { planId = '' } = useParams()
@@ -42,8 +43,8 @@ export function People() {
     <Link className="back-link" to={plan.own ? '/plans' : '/catalog'}><ArrowLeft size={16} />{plan.own ? 'Мои планы' : 'Все планы'}</Link>
     <div className="person-layout">
       <div className="person-photo"><Photo src={profile.photo} alt={profile.name} eager /><div className="person-photo-caption"><span>Сначала — что делать. Потом — с кем</span><h2>{plan.title}</h2></div></div>
-      <div className="person-details"><span className="eyebrow">{plan.own ? 'Твоя анкета' : 'Анкета автора плана'}</span>
-        <h1>{profile.name} <span>{profile.age}</span><Heart className="person-heart" /></h1>
+      <div className="person-details"><div className="person-kicker"><span className="eyebrow">{plan.own ? 'Твоя анкета' : 'Анкета автора плана'}</span><div className="person-heading-actions"><Heart className="person-heart" />{!plan.own && <SafetyMenu label="Действия с анкетой" personName={profile.name} context={{ target_type: 'profile', context_type: 'plan', context_id: plan.id }} allowBlock />}</div></div>
+        <h1>{profile.name} <span>{profile.age}</span></h1>
         <p className="person-bio">{profile.bio}</p>
         <div className="interest-tags">{profile.interests.map(interest => <span className="chip common-interest" key={interest}>{interest}</span>)}</div>
         <div className="shared-plan"><span className="eyebrow">Ваш возможный вечер</span><h3>{plan.title}</h3><p><CalendarDays size={16} />{meetingDateLabel(plan)}</p><p><MapPin size={16} />{plan.place}</p><p>{plan.description}</p></div>

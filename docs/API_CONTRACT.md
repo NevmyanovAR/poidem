@@ -1,5 +1,11 @@
 # Проект контракта API
 
+D57: POST /reports и POST /me/blocks принимают только target_type=profile|plan|match|chat; поля message_id больше нет (extra=forbid), старые payload с message/message_id возвращают 422. Чтение ранее сохранённых message-жалоб и admin-фильтр по их типу сохранены; миграций/удаления истории нет. Жалоба на переписку по-прежнему содержит не более трёх последних сообщений разрешённого чата
+
+D56: GET /me/blocks дополнен age/photo_url/context/context_saved_later/display_code без новых прав на фото и без Telegram ID/UUID пользователя. DELETE остаётся по id связи; схема БД/остальные операции не меняются. [Точный смысл полей](SETTINGS_UX.md)
+
+D55 / этап 7: добавлены /reports, /me/blocks и /admin/session|reports|reports/{id}/photo|decision. Прежняя сессия/CSRF/account context, автор/цель устанавливаются из доступного контекста; нет HTTP назначения ролей и свободного чтения переписок администратором. Схемы/коды/маршруты — [SAFETY_STAGE7](SAFETY_STAGE7.md), poidem/schemas/safety.py и OpenAPI локального backend. Существующие API сохраняют историю и применяют блокировку в прямых запросах
+
 Версия 0.10 / D54: GET /me/activity принимает необязательный UUID plan_id для прямого перехода из бота в архив. Роли, scope, скрытие и пагинация сохраняются; cursor привязан к фильтру, прежние cursor без plan_id совместимы. Новых endpoints/операций записи/миграций нет. [Контракт ссылок](BOT_UX.md#прямые-переходы)
 
 Версия 0.9 / D53: новых HTTP-endpoints нет. Бот получает private updates напрямую Bot API, не принимает клиентский Telegram ID через публичный bind API. Прежние команды откликов/решений/чата транзакционно создают notification_jobs; клиенты не назначают kind/recipient/payload. Опрос и настройки доступны командами/кнопками бота, каждый callback проверяет участника и срок. Существующие защищённые маршруты Mini App сохраняются. [События, поля и гарантии](BOT_STAGE6.md)
