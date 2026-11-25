@@ -6,7 +6,7 @@ from sqlalchemy import select
 from poidem.api.errors import AppError
 from poidem.db.models import Interest, Photo, Profile, ProfileInterest, User
 from poidem.schemas.connections import PublicPhotoDTO, PublicProfileDTO
-from poidem.services import media, plans
+from poidem.services import media, meeting_feedback, plans
 
 
 def not_found() -> AppError:
@@ -45,6 +45,7 @@ async def public_profile(session, user_id, photo_url: str) -> tuple[PublicProfil
         bio=profile.bio,
         interests=list(interests),
         photo=PublicPhotoDTO(url=photo_url),
+        experience=await meeting_feedback.experience(session, user_id),
     ), photo
 
 

@@ -11,6 +11,7 @@ export interface ReportDetail extends SafetyReport {
   comment: string | null
   evidence: { name?: string; age?: number; bio?: string; photo_id?: string; title?: string; description?: string; place?: string; starts_at?: string; reported_message_id?: string; messages?: { id: string; text: string; speaker: 'reporter' | 'reported'; created_at: string }[] }
   can_hide_plan: boolean
+  meeting_review?: { match_id: string; current: import('./feedback').MeetingResult; at_report: import('./feedback').MeetingResult | null } | null
   decisions: { action: string; reason: string; actor: string; actor_id: string; decided_at: string }[]
 }
 export const reportReasons: Record<ReportReason, string> = { content: 'Неподходящий контент', harassment: 'Оскорбления или домогательства', fraud: 'Мошенничество', fake: 'Фейковая анкета', danger: 'Опасное поведение', other: 'Другое' }

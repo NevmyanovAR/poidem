@@ -55,6 +55,7 @@ export type PlanInput = Pick<Plan, 'title' | 'category' | 'date' | 'time' | 'pla
 
 export interface PublicProfile {
   name: string; age: number; bio: string; interests: string[]; photo: string
+  experience?: import('./api/feedback').Experience
 }
 export interface PlanResponse {
   id: string; planId: string; plan: PublishedPlan | null

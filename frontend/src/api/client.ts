@@ -2,6 +2,7 @@ import { CATEGORY_CODES, INTEREST_CODES } from '../data/catalogs'
 import type { Plan, PlanInput, Profile, PublishedPlan, PlanResponse, PublicProfile, PairMatch, ResponseCapacity, MatchContact, ActivityPage, ActivityItem, ChatMessage, ChatState, MessagePage, ResponsePage } from '../types'
 import type { CreationQuota } from '../lib/planRules'
 import type { BlockedUser, ReportDetail, ReportReason, SafetyContext, SafetyReport, SafetyTarget } from './safety'
+import type { Experience, FeedbackInput, SurveyState } from './feedback'
 
 interface PhotoDTO { id: string; url: string }
 interface ProfileDTO {
@@ -22,7 +23,7 @@ interface PlanDTO {
   created_at: string; version: number; image: string; own: boolean
   updated_at?: string; archived?: boolean
 }
-interface PublicProfileDTO { name: string; age: number; bio: string; interests: string[]; photo: { url: string } }
+interface PublicProfileDTO { name: string; age: number; bio: string; interests: string[]; photo: { url: string }; experience?: Experience }
 interface ResponseDTO {
   id: string; plan_id: string; plan: PlanDTO | null; status: PlanResponse['status']; version: number
   created_at: string; profile: PublicProfileDTO | null; match_id: string | null
@@ -124,7 +125,7 @@ export class ApiClient {
   private publicProfile(value: PublicProfileDTO | null): PublicProfile | null {
     if (!value) return null
     const origin = new URL(base || '/api/v1', window.location.origin).origin
-    return { ...value, photo: new URL(value.photo.url, origin).toString() }
+    return { ...value, photo: value.photo?.url ? new URL(value.photo.url, origin).toString() : '' }
   }
   private responseFromDTO(value: ResponseDTO): PlanResponse {
     const history = value.history_context
@@ -232,6 +233,11 @@ export class ApiClient {
     const value = await this.request<{ match: MatchDTO }>(`/matches/${encodeURIComponent(id)}`)
     return this.matchFromDTO(value.match)
   }
+  survey(id: string): Promise<SurveyState> { return this.request(`/matches/${encodeURIComponent(id)}/survey`) }
+  saveFeedback(id: string, payload: FeedbackInput): Promise<SurveyState> {
+    return this.track(() => this.request(`/matches/${encodeURIComponent(id)}/feedback`, { method: 'POST', body: JSON.stringify(payload) }))
+  }
+  reliability(): Promise<Experience> { return this.request('/me/reliability') }
   async contact(id: string): Promise<MatchContact> {
     const value = await this.request<{ available: boolean; telegram_url: string | null; reason: string | null }>(`/matches/${encodeURIComponent(id)}/contact`)
     // Контакт — только безопасная публичная ссылка Telegram, без произвольных схем/параметров.

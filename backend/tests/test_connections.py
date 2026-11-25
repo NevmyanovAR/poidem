@@ -40,7 +40,11 @@ def test_public_profile_is_scoped_and_private_photo_remains_private(members):
     response = b.get(f"/api/v1/plans/{plan['id']}/author")
     assert response.status_code == 200, response.text
     public = response.json()["profile"]
-    assert set(public) == {"name", "age", "bio", "interests", "photo"}
+    assert set(public) == {"name", "age", "bio", "interests", "photo", "experience"}
+    assert public["experience"] == {
+        "unique_confirmed_partners": 0,
+        "policy_version": "D58-mutual-unique-partners-v1",
+    }
     assert set(public["photo"]) == {"url"}
     assert len(public["interests"]) == 3
     photo = b.get(public["photo"]["url"])

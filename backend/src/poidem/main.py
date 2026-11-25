@@ -13,7 +13,16 @@ from poidem.api.middleware import (
     ExceptionBoundaryMiddleware,
     RequestContextMiddleware,
 )
-from poidem.api.routers import account, activity, connections, health, plans, reference_data, safety
+from poidem.api.routers import (
+    account,
+    activity,
+    connections,
+    feedback,
+    health,
+    plans,
+    reference_data,
+    safety,
+)
 from poidem.db.session import Database
 from poidem.services.archive import archive_loop
 from poidem.services.media import cleanup_loop
@@ -56,6 +65,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(account.router)
     app.include_router(plans.router)
     app.include_router(connections.router)
+    app.include_router(feedback.router)
     app.include_router(activity.router)
     app.include_router(safety.router)
     # Последний добавленный middleware оборачивает остальные.

@@ -1,5 +1,7 @@
 # Проект контракта API
 
+D58: реализованы GET /matches/{id}/survey, POST /matches/{id}/feedback и GET /me/reliability. SurveyDTO содержит общий результат/наличие ответов и только собственный rating/comment; POST принимает лишь met/rating/comment и прежний CSRF/account context. Публичная анкета дополнена experience={unique_confirmed_partners,policy_version:"D58-mutual-unique-partners-v1"}; это число уникальных партнёров, а не звёздный рейтинг. Admin detail дополнен meeting_review только по связанной жалобе; новых санкций нет. Нижние архитектурные черновики ReliabilityDTO/FeedbackDTO заменены действующими схемами feedback.py для этого объёма. [Поля, правила и ошибки](MEETINGS_STAGE8.md#api-и-безопасность)
+
 D57: POST /reports и POST /me/blocks принимают только target_type=profile|plan|match|chat; поля message_id больше нет (extra=forbid), старые payload с message/message_id возвращают 422. Чтение ранее сохранённых message-жалоб и admin-фильтр по их типу сохранены; миграций/удаления истории нет. Жалоба на переписку по-прежнему содержит не более трёх последних сообщений разрешённого чата
 
 D56: GET /me/blocks дополнен age/photo_url/context/context_saved_later/display_code без новых прав на фото и без Telegram ID/UUID пользователя. DELETE остаётся по id связи; схема БД/остальные операции не меняются. [Точный смысл полей](SETTINGS_UX.md)
@@ -143,7 +145,7 @@ PUT `/me/profile`:
 
 Реализованный PhotoDTO: `{id,url}`. `url` — относительный `/api/v1/media/photos/{id}`, не путь диска; frontend разрешает его относительно origin API. При multipart допускается ровно одно поле file, JPEG/PNG/WebP; проверяются фактическое содержимое/16MP и перекодирование без metadata. Успешное декодирование не является модерацией. Preview находится в памяти, не в localStorage.
 
-ReliabilityDTO до согласования расчёта: `{ "available": false, "level": null, "formula_version": null }`. Счёт/ярлык не придумывается. После B10 схема дополняется согласованными подтверждёнными сводками. Клиент не отправляет рейтинг или source:server.
+ExperienceDTO по D58: `{ "unique_confirmed_partners": 0, "policy_version": "D58-mutual-unique-partners-v1" }`. Число считается по двум завершённым Да для уникальных серверных UUID партнёров, без среднего рейтинга/ярлыка. Клиент не отправляет счёт, версию или source:server. Прежний проект ReliabilityDTO не применяется к этому endpoint.
 
 ### План
 
@@ -200,7 +202,7 @@ POST response принимает `{ "expected_plan_version": 1 }`; responder о�
 
 ReportCreate: `{target:{type:"user"|"plan",id}, reason_code, comment}`. Actor, status и решение не принимаются от клиента; reason_code/границы комментария согласуются B06. Повтор HTTP-запроса с тем же ключом не создаёт вторую жалобу; разрешены ли новые жалобы об иной ситуации — отдельная policy.
 
-FeedbackDTO: `{match_id, met:boolean, rating:null|number, comment:null|string}`. Ввод/финализация нескольких шагов бота описываются B09; шкала не фиксируется числом 5. У каждого из двух участников отдельная запись и стадия завершения. Отсутствующий/незавершённый ответ не становится met:false. Callback бота использует те же сервисы с проверенным sender, не обходит проверку участника. Нельзя читать чужие индивидуальные ответы этим endpoint.
+FeedbackWrite по D53/D58: `{met:boolean,rating:null|integer(1..5),comment:null|string(до 2000)}`; match_id только в URL, сторона выводится из серверной сессии. Да требует оценку, Нет не принимает оценку/комментарий; extra=forbid. У каждого участника прежняя отдельная запись; отсутствие/незавершённость не становятся met:false. Бот и HTTP сериализуют прежний Survey. Результат — SurveyDTO с собственным ответом и общим итогом, без чужих индивидуальных оценок/комментариев.
 
 `POST /events`: только allowlist B12, например `{event_id, type:"contact_link_clicked", match_id}` после разрешённого контакта. user_id и время задаёт сервер; снаружи нельзя заявить plan_created, match_created, meeting_confirmed, произвольную оценку или событие от другого пользователя.
 

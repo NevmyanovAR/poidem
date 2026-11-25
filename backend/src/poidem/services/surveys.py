@@ -72,7 +72,9 @@ def keyboard(token, stage="question"):
 async def delivery(session, job, settings):
     import uuid
 
-    survey = await session.get(Survey, uuid.UUID(job.entity_ref["survey_id"]))
+    survey = await session.scalar(
+        select(Survey).where(Survey.id == uuid.UUID(job.entity_ref["survey_id"])).with_for_update()
+    )
     if not survey or survey.policy_version != POLICY:
         return None
     match = await session.get(Match, survey.match_id)
@@ -130,7 +132,7 @@ async def recipient_for(session, telegram_id, token=None, prompt_id=None):
         query = query.where(SurveyRecipient.comment_prompt_message_id == prompt_id)
     else:
         raise unavailable()
-    row = (await session.execute(query.with_for_update(of=SurveyRecipient))).first()
+    row = (await session.execute(query.with_for_update(of=Survey))).first()
     if not row:
         raise unavailable()
     recipient, survey, match, plan = row
@@ -157,6 +159,7 @@ async def answer(session, telegram_id, token, action):
     if current is None:
         current = FeedbackAnswer(survey_id=survey.id, participant_side=recipient.participant_side)
         session.add(current)
+    previous = (current.met, current.rating, current.comment, current.completion_state)
     if action == "y":
         current.met = True
         current.rating = None
@@ -180,8 +183,9 @@ async def answer(session, telegram_id, token, action):
             )
         current.rating = int(action[1:])
         current.completion_state = "submitted"
-    current.updated_at = plans.now()
-    current.submitted_at = plans.now() if current.completion_state == "submitted" else None
+    if previous != (current.met, current.rating, current.comment, current.completion_state):
+        current.updated_at = plans.now()
+        current.submitted_at = plans.now() if current.completion_state == "submitted" else None
     if current.met and current.rating is None:
         return text_message("Как оценишь встречу?", "От 1 до 5"), keyboard(token, "rating"), False
     return (
@@ -198,7 +202,8 @@ async def comment(session, telegram_id, prompt_id, body):
         raise unavailable()
     if not body.strip() or len(body) > 2000:
         raise AppError(422, "FEEDBACK_COMMENT_INVALID", "Комментарий: от 1 до 2000 символов")
-    current.comment = body.strip()
-    current.updated_at = plans.now()
-    current.submitted_at = plans.now()
+    if current.comment != body.strip():
+        current.comment = body.strip()
+        current.updated_at = plans.now()
+        current.submitted_at = plans.now()
     return text_message("Комментарий сохранён")

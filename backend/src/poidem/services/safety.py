@@ -23,7 +23,7 @@ from poidem.db.models import (
     UserRestriction,
 )
 from poidem.security.session import lock_actor
-from poidem.services import candidates, connections, plans
+from poidem.services import candidates, connections, meeting_feedback, plans
 from poidem.services.rate_limit import rate_limit
 
 
@@ -176,6 +176,11 @@ async def context(session, actor, payload, *, reporting=False):
                 }
                 for row in reversed(rows)
             ]
+    if match:
+        evidence["meeting_context"] = {
+            "match_id": str(match.id),
+            "at_report": (await meeting_feedback.review(session, match)).model_dump(),
+        }
     return target, target_key, evidence, (case_target, version)
 
 
@@ -438,6 +443,7 @@ async def admin_detail(session, actor, identity):
         "comment": entry.comment,
         "evidence": entry.evidence,
         "can_hide_plan": entry.target_type == "plan" and entry.state == "pending",
+        "meeting_review": await report_meeting_review(session, entry),
         "decisions": [
             {
                 "action": d.action,
@@ -448,6 +454,31 @@ async def admin_detail(session, actor, identity):
             }
             for d, name in decisions
         ],
+    }
+
+
+async def report_meeting_review(session, entry):
+    context = entry.evidence.get("meeting_context")
+    identity = context.get("match_id") if isinstance(context, dict) else None
+    # Legacy chat/match keys were assigned by the same protected server context.
+    if not identity and entry.target_type in ("chat", "match") and entry.target_key:
+        prefix, _, value = entry.target_key.partition(":")
+        if prefix == entry.target_type:
+            identity = value
+    try:
+        match_id = uuid.UUID(identity) if isinstance(identity, str) else None
+    except ValueError:
+        return None
+    match = await session.get(Match, match_id) if match_id else None
+    if not match or {entry.reporter_id, entry.reported_user_id} != {
+        match.author_id,
+        match.responder_id,
+    }:
+        return None
+    return {
+        "match_id": str(match.id),
+        "current": (await meeting_feedback.review(session, match)).model_dump(),
+        "at_report": context.get("at_report") if isinstance(context, dict) else None,
     }
 
 

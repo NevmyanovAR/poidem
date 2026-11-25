@@ -149,6 +149,11 @@ export function ApiProvider({ children }: { children: ReactNode }) {
     if (!active.current || closing.current || epoch !== authEpoch.current) throw new ApiError('AUTH_CONTEXT_CHANGED', 'Аккаунт сменился')
     return result
   }, [authorization.status])
+  const meeting = useMemo<AppContextValue['meeting']>(() => ({
+    survey: id => readConnection(() => client.survey(id)),
+    saveFeedback: (...args) => readConnection(() => client.saveFeedback(...args)),
+    reliability: () => readConnection(() => client.reliability()),
+  }), [client, readConnection])
   const safety = useMemo<AppContextValue['safety']>(() => ({
     report: (...args) => readConnection(() => client.report(...args)),
     block: (...args) => readConnection(() => client.block(...args)),
@@ -221,7 +226,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   }
 
   return <AppContext.Provider value={{
-    safety,
+    safety, meeting,
     data, plans: data.ownPlans, publishedPlans,
     authorization, busy, dailyQuota, plansLoading, plansError, planError,
     incomingResponses, outgoingResponses, matches, connectionsLoading, connectionsError, refreshConnections,

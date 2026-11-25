@@ -28,6 +28,7 @@ export default function App() {
     document.querySelector<HTMLElement>('main')?.focus({ preventScroll: true })
   }, [pathname])
   const isWelcome = pathname === '/'
+  const isPlanDetails = pathname.startsWith('/people/')
 
   return <>
     <a className="skip-link" href="#main">К содержимому</a>
@@ -35,7 +36,7 @@ export default function App() {
       <nav aria-label="Основная навигация" className="desktop-nav">{links.map(link => <NavLink key={link.to} to={link.to}>{link.text}</NavLink>)}</nav>
       <div className={`header-account ${pathname === '/profile' ? 'has-settings' : ''}`}><Link className="profile-link" to="/profile" aria-label="Моя анкета">{data.profile ? <img src={data.profile.photo} alt="" /> : <UserRound size={19} />}<span>{data.profile?.name ?? 'Моя анкета'}</span></Link>{pathname === '/profile' && <Link to="/settings" className="settings-link" aria-label="Настройки"><SettingsIcon size={21} /></Link>}</div>
     </div></header>}
-    <main id="main" tabIndex={-1} className={isWelcome ? 'welcome-main' : 'main-container'}><Routes>
+    <main id="main" tabIndex={-1} className={isWelcome ? 'welcome-main' : `main-container${isPlanDetails ? ' plan-detail-main' : ''}`}><Routes>
       <Route path="/" element={<Welcome />} />
       <Route element={<ProfileSettingsFrame />}>
         <Route path="/profile" element={null} />
@@ -54,7 +55,7 @@ export default function App() {
       <Route path="/start" element={<Navigate to="/" replace />} />
       <Route path="*" element={<EmptyState title="Кажется, мы свернули не туда" action="На главную" to="/home">Такой страницы нет. Но хороший план обязательно найдётся</EmptyState>} />
     </Routes></main>
-    {!isWelcome && <><footer className="site-footer"><Brand /><span>Сначала — что делать. Потом — с кем</span></footer>
+    {!isWelcome && <>{!isPlanDetails && <footer className="site-footer"><Brand /><span>Сначала — что делать. Потом — с кем</span></footer>}
       <nav className="mobile-nav" aria-label="Мобильная навигация">{links.map(({ to, text, icon: Icon }) => <NavLink key={to} to={to}><Icon size={21} /><span>{text}</span></NavLink>)}<NavLink to="/create" className="mobile-create" aria-label="Создать свой план"><Plus size={23} /></NavLink></nav></>}
     <div className={`toast ${toast ? 'is-visible' : ''}`} role="status" aria-live="polite">{toast}</div>
 

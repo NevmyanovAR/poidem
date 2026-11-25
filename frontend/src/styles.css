@@ -639,7 +639,16 @@ button:disabled { cursor: not-allowed; }
 .interest-tags .chip { min-height: 30px; padding: 7px 11px; }
 .match-partner { margin: 22px auto; text-align: left; max-width: 590px; overflow-wrap: anywhere; }
 .match-partner h2 { font-size: 30px; margin: 0 0 10px; }
+.meeting-feedback { max-width: 590px; margin: 24px auto; padding-top: 20px; border-top: 1px solid var(--line); text-align: left; overflow-wrap: anywhere; }
+.meeting-feedback h2 { font-size: 30px; margin-bottom: 14px; }
+.meeting-feedback > p { margin-block: 10px; }
+.meeting-result { color: var(--sky); }
+.meeting-feedback-form { display: grid; gap: 12px; margin-top: 16px; min-width: 0; }
+.meeting-feedback-form :is(select, textarea) { width: 100%; max-width: 100%; }
+.meeting-feedback-form .plan-actions { flex-wrap: wrap; }
+.meeting-feedback-form .chip { min-height: 44px; }
 .match-partner p { font-size: 13px; line-height: 1.75; margin: 0 0 12px; }
+.match-partner .reliability-status { font-size: 11px; }
 .archive-toggle { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
 .archive-toggle input { width: 18px; min-height: 18px; }
 .archive-visibility { align-self: flex-start; margin: 10px 0 6px; }
@@ -743,3 +752,48 @@ button:disabled { cursor: not-allowed; }
 .safety-dialog p { font-size: 12px; line-height: 1.7; }
 .safety-dialog .button { min-height: 44px; font-size: 12px; }
 @media (max-width: 480px) { .blocked-person { grid-template-columns: 44px minmax(0, 1fr); gap: 8px 12px; } .blocked-avatar { width: 44px; height: 44px; } .blocked-unblock { grid-column: 2; justify-self: start; } .settings-row { gap: 12px; padding-block: 18px; } .person-heading-actions .person-heart { width: 24px; height: 24px; } }
+
+/* Человек и действие — перед раскрываемыми подробностями чужого плана. */
+.plan-detail-main { min-height: 0; }
+.plan-detail-page { padding-top: 18px; }
+.plan-detail-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; min-height: 44px; }
+.plan-detail-toolbar .back-link { margin: 0; }
+.plan-detail-toolbar .person-heart { width: 24px; height: 24px; margin-right: 8px; }
+.plan-detail-page .person-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 48px); }
+.plan-detail-page .person-photo { height: clamp(360px, 55vh, 560px); border-radius: 16px; }
+.plan-detail-page .person-photo > img { object-fit: cover; object-position: 50% 18%; }
+.plan-detail-page .person-photo::after { pointer-events: none; }
+.person-photo-placeholder { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: var(--surface-soft); color: var(--sky); font-size: 12px; }
+.person-photo-placeholder > * { position: relative; z-index: 1; }
+.plan-detail-page .person-details { padding-top: 0; min-width: 0; }
+.plan-detail-page .person-details h1 { display: block; margin: 0; font-size: clamp(30px, 4vw, 44px); line-height: 1.15; letter-spacing: -.02em; }
+.plan-detail-page .person-details h1 > span { font-size: .78em; white-space: nowrap; }
+.person-plan { margin-top: 16px; min-width: 0; overflow-wrap: anywhere; }
+.person-plan h2 { font-size: clamp(26px, 3vw, 34px); line-height: 1.1; margin-bottom: 12px; }
+.person-plan p { display: flex; align-items: flex-start; gap: 9px; font-size: 12px; line-height: 1.6; color: var(--muted); margin-top: 6px; }
+.person-plan svg { color: var(--sky); margin-top: 2px; }
+.person-response { margin-top: 16px; }
+.person-response .invite-button { margin: 0; }
+.person-response .small-note { margin-top: 8px; }
+.person-response .waiting-panel { padding-top: 0; }
+.person-utilities { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; margin-top: 6px; }
+.person-more { margin-top: 12px; padding-block: 14px; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.person-more > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; color: var(--sky); font-size: 12px; list-style: none; min-height: 24px; }
+.person-more > summary::-webkit-details-marker { display: none; }
+.person-more[open] > summary svg { transform: rotate(180deg); }
+.person-more .person-bio { font-size: 23px; line-height: 1.3; margin: 18px 0 16px; }
+.person-more h3 { font-size: 24px; margin-block: 22px 10px; }
+.person-more > p:not(.person-bio) { font-size: 13px; line-height: 1.7; }
+.experience-badge { margin: 10px 0 0; max-width: 100%; }
+.experience-badge > summary { display: inline-block; max-width: 100%; border: 1px solid var(--line); border-radius: 20px; padding: 7px 12px; color: var(--sky); font-size: 11px; line-height: 1.4; cursor: pointer; list-style: none; }
+.experience-badge > summary::-webkit-details-marker { display: none; }
+.experience-badge > p { margin-top: 8px; max-width: 360px; }
+@media (max-width: 680px) {
+  .plan-detail-main { padding-bottom: calc(100px + var(--app-safe-bottom)); }
+  .plan-detail-page { padding-top: 10px; }
+  .plan-detail-page .person-layout { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .plan-detail-page .person-photo { height: 230px; height: clamp(190px, 28svh, 260px); }
+  .person-plan { margin-top: 12px; }
+  .person-plan h2 { margin-bottom: 8px; }
+  .person-response { margin-top: 12px; }
+}

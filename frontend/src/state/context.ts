@@ -4,6 +4,7 @@ import type { AuthorizationState, AppState, Plan, PlanInput, Profile, PublishedP
 import type { CreationQuota } from '../lib/planRules'
 
 export interface AppContextValue {
+  meeting: Pick<ApiClient, 'survey' | 'saveFeedback' | 'reliability'>
   safety: Pick<ApiClient, 'report' | 'block' | 'blocks' | 'unblock' | 'adminSession' | 'adminReports' | 'adminReport' | 'adminDecision' | 'reportPhotoUrl'>
   data: AppState
   plans: Plan[]

@@ -9,6 +9,7 @@ import { meetingDateLabel } from '../lib/date'
 import { matchPartner } from '../lib/recordActions'
 import { ArchiveResponseHistory } from '../components/ResponseHistory'
 import { SafetyMenu } from '../components/SafetyMenu'
+import { ExperienceCaption, MeetingFeedback } from '../components/MeetingFeedback'
 
 export function Match() {
   const { inviteId = '' } = useParams()
@@ -17,8 +18,16 @@ export function Match() {
   const [screen, setScreen] = useState<{ userId: string; match: PairMatch; contact: MatchContact } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const flight = useRef(0)
+  const flight = useRef(0), experienceFlight = useRef(0)
   const invalidate = useCallback(() => { flight.current++ }, [])
+  const refreshExperience = useCallback(async () => {
+    if (!userId) return
+    const request = ++experienceFlight.current, turn = flight.current
+    try {
+      const match = await loadMatch(inviteId)
+      if (request === experienceFlight.current && turn === flight.current) setScreen(current => current?.userId === userId && current.match.id === inviteId ? { ...current, match } : current)
+    } catch { /* Общий результат сохранён; прежние данные можно обновить обычной кнопкой. */ }
+  }, [userId, inviteId, loadMatch])
   const reload = useCallback(async () => {
     if (!userId) return
     const turn = ++flight.current
@@ -48,7 +57,8 @@ export function Match() {
     <p className="match-description">План есть. Пара тоже. Осталось договориться о деталях</p>
     <div className="match-plan"><Photo src={match.image} alt={match.title} /><div><span className="eyebrow">Ваш план</span><h2>{match.title}</h2><p><CalendarDays size={15} />{meetingDateLabel(match)}</p><p><MapPin size={15} />{match.place}</p></div></div>
     {match.archived && match.viewerRole === 'author' && <ArchiveResponseHistory planId={match.planId} />}
-    {partner && <section className="match-partner" aria-label="Анкета партнёра"><h2>{partner.name}, {partner.age}</h2><p>{partner.bio}</p><div className="interest-tags">{partner.interests.map(interest => <span className="chip" key={interest}>{interest}</span>)}</div></section>}
+    <MeetingFeedback matchId={match.id} onSaved={refreshExperience} />
+    {partner && <section className="match-partner" aria-label="Анкета партнёра"><h2>{partner.name}, {partner.age}</h2><ExperienceCaption value={partner.experience} /><p>{partner.bio}</p><div className="interest-tags">{partner.interests.map(interest => <span className="chip" key={interest}>{interest}</span>)}</div></section>}
     {match.meetingCancelled && <p className="small-note">Встреча отменена. Переписка сохранена</p>}
     <Link className="button button-primary match-contact" to={`/match/${match.id}/chat`}>Открыть чат{match.unreadCount ? ` · ${match.unreadCount}` : ''}</Link>
     {contact.available && contact.telegramUrl && <a className="button button-outline match-contact" href={contact.telegramUrl} target="_blank" rel="noopener noreferrer" onClick={event => {

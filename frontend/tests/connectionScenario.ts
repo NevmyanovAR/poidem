@@ -50,6 +50,8 @@ export function scenario(options: { full?: boolean; matched?: boolean; noUsernam
           profile: { user_id: viewer, name: profileFor(viewer).name, age: 24, gender_code: 'woman', preference_code: 'any', bio: 'Тест', photo: { id: viewer, url: '/images/gallery.jpeg' }, interest_ids: ['art', 'coffee', 'walks'], version: 1, moderation_status: 'not_submitted' } })
         if (path === '/api/v1/auth/csrf') return json({ user_id: viewer, csrf_token: 'synthetic-only' })
         expect(req.headers()['x-account-context']).toBe(viewer)
+        if (path === '/api/v1/me/reliability') return json({ unique_confirmed_partners: 0, policy_version: 'D58-mutual-unique-partners-v1' })
+        if (path === `/api/v1/matches/${matchId}/survey`) return json({ availability: 'upcoming', opens_at: '2099-01-02T18:00:00Z', closes_at: '2099-01-09T16:00:00Z', can_answer: false, own_answer: null, other_answered: false, result: { result: 'no_data', author_answered: false, responder_answered: false }, policy_version: 'D53-2h-1to5-optional-comment-edit7d' })
         if (path === '/api/v1/me/quotas') return json({ maximum: 3, used: 1, remaining: 2, day: '2099-01-01', time_zone: 'Europe/Moscow' })
         if (path === '/api/v1/me/plans') return json({ items: viewer === author ? [plan(viewer)] : [], next_cursor: null })
         const rejected = state.attempts.some(attempt => attempt.status === 'rejected' && (attempt.responderId ?? responder) === viewer)

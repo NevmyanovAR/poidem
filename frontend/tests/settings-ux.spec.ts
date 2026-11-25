@@ -208,6 +208,10 @@ test('native Telegram Back returns through settings without discarding the profi
     } } })
   })
   await launch(page, '/profile')
+  // Возврат проверяем на уже загруженной анкете: неподтверждённый черновик
+  // намеренно не переносится при смене серверной identity во время входа.
+  await expect(page.getByText('Данные Telegram подтверждены сервером', { exact: true })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Твоё имя', exact: true })).toHaveValue('Тестовый участник')
   await page.getByRole('textbox', { name: 'Твоё имя', exact: true }).fill('Черновик с нативной кнопкой')
   await page.getByRole('link', { name: 'Настройки', exact: true }).click()
   await page.getByRole('link', { name: /Безопасность/ }).click()

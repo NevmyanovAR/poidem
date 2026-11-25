@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
+from poidem.schemas.feedback import ExperienceDTO
 from poidem.schemas.plan import PlanDTO
 
 
@@ -17,6 +18,7 @@ class PublicProfileDTO(BaseModel):
     bio: str
     interests: list[str]
     photo: PublicPhotoDTO
+    experience: ExperienceDTO
 
 
 class PublicProfileEnvelope(BaseModel):

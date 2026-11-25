@@ -146,6 +146,66 @@ def test_two_independent_answers_comment_edit_expiry_and_foreign_callback_are_sa
     run(bot_settings, execute)
 
 
+@pytest.mark.parametrize("action", ["n", "r4", "comment"])
+def test_identical_answer_with_new_update_keeps_original_timestamps(
+    members, bot_settings, migration_engine, clock, action
+):
+    paired(members)
+    only_surveys(migration_engine)
+
+    async def execute(db, bot, handler, worker):
+        await handler.process(message(1))
+        async with db.sessions() as session:
+            survey = await session.scalar(select(Survey))
+            clock[0] = survey.scheduled_at
+        for _ in range(2):
+            await worker.run_once()
+        delivered = next(
+            item
+            for item in bot.sent
+            if item.get("reply_markup")
+            and (item["reply_markup"].inline_keyboard[0][0].callback_data or "").startswith("sv:")
+        )
+        token = delivered["reply_markup"].inline_keyboard[0][0].callback_data.split(":")[1]
+        if action != "n":
+            await handler.process(callback(2, 101, f"sv:{token}:y"))
+            await handler.process(callback(3, 101, f"sv:{token}:r4"))
+        if action == "comment":
+            await handler.process(callback(4, 101, f"sv:{token}:comment"))
+            async with db.sessions() as session:
+                prompt = await session.scalar(
+                    select(SurveyRecipient.comment_prompt_message_id).where(
+                        SurveyRecipient.participant_side == "author"
+                    )
+                )
+            first = message(5, 101, "Синтетический комментарий", prompt_id=prompt)
+            again = message(6, 101, "Синтетический комментарий", prompt_id=prompt)
+        else:
+            first = callback(5, 101, f"sv:{token}:{action}")
+            again = callback(6, 101, f"sv:{token}:{action}")
+        await handler.process(first)
+        async with db.sessions() as session:
+            before = (
+                await session.execute(
+                    select(FeedbackAnswer.updated_at, FeedbackAnswer.submitted_at)
+                )
+            ).one()
+        clock[0] += timedelta(seconds=1)
+        await handler.process(first)  # Тот же Telegram update.
+        await handler.process(again)  # Та же операция в новом update.
+        async with db.sessions() as session:
+            after = (
+                await session.execute(
+                    select(FeedbackAnswer.updated_at, FeedbackAnswer.submitted_at)
+                )
+            ).one()
+            assert after == before
+            assert await session.scalar(select(func.count()).select_from(FeedbackAnswer)) == 1
+            assert await session.scalar(select(func.count()).select_from(ReliabilityEvent)) == 0
+
+    run(bot_settings, execute)
+
+
 @pytest.mark.parametrize("case", ["cancelled", "expired", "not_started", "opt_out"])
 def test_cancelled_or_undeliverable_survey_does_not_become_a_no_answer(
     members, bot_settings, migration_engine, clock, case

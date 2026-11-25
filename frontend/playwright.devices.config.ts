@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
-  testDir: './tests', testMatch: ['**/final-mobile.spec.ts', '**/connections.spec.ts', '**/chat-archive.spec.ts', '**/cards-ux.spec.ts', '**/response-history.spec.ts', '**/moderation.spec.ts', '**/settings-ux.spec.ts'], workers: 1,
+  testDir: './tests', testMatch: ['**/final-mobile.spec.ts', '**/connections.spec.ts', '**/chat-archive.spec.ts', '**/cards-ux.spec.ts', '**/response-history.spec.ts', '**/moderation.spec.ts', '**/settings-ux.spec.ts', '**/meeting-feedback.spec.ts', '**/plan-detail-ux.spec.ts'], workers: 1,
   outputDir: 'test-results/devices',
   retries: 0, forbidOnly: true, reporter: 'list',
   use: { baseURL: 'http://127.0.0.1:4173', headless: true, screenshot: 'only-on-failure', trace: 'retain-on-failure' },
