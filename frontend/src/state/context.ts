@@ -35,7 +35,7 @@ export interface AppContextValue {
   loadMatch: (id: string) => Promise<PairMatch>
   loadContact: (id: string) => Promise<MatchContact>
   loadPlanResponses: (id: string, cursor?: string) => Promise<ResponsePage>
-  loadActivity: (scope: 'active' | 'archive', includeHidden: boolean, cursor?: string) => Promise<ActivityPage>
+  loadActivity: (scope: 'active' | 'archive', includeHidden: boolean, cursor?: string, planId?: string) => Promise<ActivityPage>
   hideArchive: (planId: string, hidden: boolean) => Promise<void>
   loadChat: (id: string) => Promise<ChatState>
   loadMessages: (id: string, direction?: { before?: number; after?: number }) => Promise<MessagePage>

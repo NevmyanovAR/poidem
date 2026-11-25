@@ -32,6 +32,9 @@ async def login(session: AsyncSession, raw: str, settings: Settings, old_cookie:
     if user.account_status != "active":
         raise AppError(403, "ACCOUNT_BLOCKED", "Действия аккаунта ограничены")
     user.private_username = identity.username
+    from poidem.services.bot_bindings import attach_verified_user
+
+    await attach_verified_user(session, user)
     now = datetime.now(UTC)
     await session.execute(
         delete(AuthSession).where(

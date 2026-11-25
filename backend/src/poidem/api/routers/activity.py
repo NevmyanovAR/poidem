@@ -60,9 +60,16 @@ async def my_activity(
     include_hidden: bool = False,
     cursor: str | None = Query(None, max_length=512),
     limit: int = Query(20, ge=1, le=50),
+    plan_id: uuid.UUID | None = None,
 ):
     return await activity.listing(
-        session, actor, scope=scope, include_hidden=include_hidden, cursor=cursor, limit=limit
+        session,
+        actor,
+        scope=scope,
+        include_hidden=include_hidden,
+        cursor=cursor,
+        limit=limit,
+        plan_id=plan_id,
     )
 
 

@@ -4,7 +4,7 @@ import type { ActivityItem, Plan } from '../types'
 import { EmptyState } from './ui'
 import { MatchCard, OwnPlanCard, ResponseCard } from './PlanCards'
 
-export function ActivityFeed({ archive, onCancel, revision = 0 }: { archive: boolean; onCancel: (plan: Plan) => void; revision?: number }) {
+export function ActivityFeed({ archive, onCancel, revision = 0, planId }: { archive: boolean; onCancel: (plan: Plan) => void; revision?: number; planId?: string }) {
   const { loadActivity, hideArchive } = useAppData()
   const [includeHidden, setIncludeHidden] = useState(false)
   const [items, setItems] = useState<ActivityItem[]>([])
@@ -19,7 +19,7 @@ export function ActivityFeed({ archive, onCancel, revision = 0 }: { archive: boo
     try {
       let next = more, result: ActivityItem[] = [], following: string | null
       do {
-        const page = await loadActivity(archive ? 'archive' : 'active', includeHidden, next)
+        const page = await loadActivity(archive ? 'archive' : 'active', includeHidden, next, planId)
         result = [...result, ...page.items]; following = page.nextCursor; next = following ?? undefined
       } while (!more && next && result.length < shownCount.current)
       if (!live.current || turn !== flight.current) return
@@ -27,7 +27,7 @@ export function ActivityFeed({ archive, onCancel, revision = 0 }: { archive: boo
       setCursor(following); setError('')
     } catch (reason) { if (live.current && turn === flight.current) setError(reason instanceof Error ? reason.message : 'Не удалось загрузить список') }
     finally { if (live.current && turn === flight.current) setLoading(false) }
-  }, [loadActivity, archive, includeHidden])
+  }, [loadActivity, archive, includeHidden, planId])
   useEffect(() => {
     live.current = true
     queueMicrotask(() => { if (live.current) void refresh() })

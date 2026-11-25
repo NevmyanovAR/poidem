@@ -29,7 +29,7 @@ from poidem.schemas.connections import (
     ResponsePage,
 )
 from poidem.security.session import lock_actor
-from poidem.services import candidates, plans
+from poidem.services import candidates, notifications, plans, surveys
 
 ACTIVE = ("waiting", "accepted")
 
@@ -239,6 +239,7 @@ async def send(session, actor, plan_id, payload, key):
         )
         session.add(entry)
         await session.flush()
+        await notifications.response_event(session, entry, "response_received")
     session.add(
         IdempotencyRecord(
             actor_id=actor.user_id,
@@ -308,7 +309,7 @@ async def decide(session, actor, response_id, payload):
             [ChatReadState(match_id=match.id, role=role) for role in ("author", "responder")]
         )
         # Не выдаём автоматическое закрытие за персональный отказ автора.
-        await session.execute(
+        closed_rows = await session.execute(
             update(PlanResponse)
             .where(
                 PlanResponse.plan_id == plan.id,
@@ -322,7 +323,12 @@ async def decide(session, actor, response_id, payload):
                 decision_actor_id=None,
                 version=PlanResponse.version + 1,
             )
+            .returning(PlanResponse)
         )
+        for closed in closed_rows.scalars():
+            await notifications.response_event(session, closed, "response_closed")
+        await notifications.response_event(session, entry, "response_accepted")
+        await surveys.schedule(session, match)
         plan.publication_status = "closed"
         plan.version += 1
         plan.updated_at = plans.now()
@@ -332,6 +338,8 @@ async def decide(session, actor, response_id, payload):
     entry.decision_actor_id = actor.user_id
     entry.decided_at = plans.now()
     entry.version += 1
+    if target == "rejected":
+        await notifications.response_event(session, entry, "response_rejected")
     await session.commit()
     return await response_dto(session, actor, entry)
 

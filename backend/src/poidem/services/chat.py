@@ -6,7 +6,7 @@ from poidem.api.errors import AppError
 from poidem.db.models import ChatMessage, ChatReadState, ChatThread, Plan, User
 from poidem.schemas.chat import ChatDTO, MessageDTO, MessagePage
 from poidem.security.session import lock_actor
-from poidem.services import archive, connections, plans
+from poidem.services import archive, connections, notifications, plans
 from poidem.services.rate_limit import rate_limit
 
 
@@ -146,6 +146,7 @@ async def send(session, actor, match_id, payload, maximum):
         body=payload.text,
     )
     session.add(message)
+    await notifications.chat_event(session, match, other_id, message.client_id)
     await session.commit()
     return message_dto(message, actor), True
 

@@ -21,6 +21,13 @@ x-runtime-environment: &runtime-environment
   CORS_ORIGINS: ${CORS_ORIGINS:-["http://127.0.0.1:5173","http://localhost:5173","http://127.0.0.1:4173","http://localhost:4173"]}
   TRUSTED_HOSTS: ${TRUSTED_HOSTS:-["127.0.0.1","localhost"]}
   TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-ShallWeGoo_bot}
+  NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-true}
+  NOTIFICATION_MAX_ATTEMPTS: ${NOTIFICATION_MAX_ATTEMPTS:-5}
+  NOTIFICATION_LEASE_SECONDS: ${NOTIFICATION_LEASE_SECONDS:-90}
+  TELEGRAM_REQUEST_TIMEOUT_SECONDS: ${TELEGRAM_REQUEST_TIMEOUT_SECONDS:-10}
+  CHAT_NOTIFICATION_WINDOW_SECONDS: ${CHAT_NOTIFICATION_WINDOW_SECONDS:-60}
+  CHAT_MESSAGES_PER_MINUTE: ${CHAT_MESSAGES_PER_MINUTE:-30}
   MINI_APP_URL: ${MINI_APP_URL:-}
   API_PUBLIC_URL: ${API_PUBLIC_URL:-}
   INIT_DATA_MAX_AGE_SECONDS: ${INIT_DATA_MAX_AGE_SECONDS:-300}
@@ -77,6 +84,14 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+  bot:
+    profiles: [app]
+    build: *backend-build
+    environment: *runtime-environment
+    depends_on:
+      db: {condition: service_healthy}
+    command: [python, -m, poidem.bot]
 
   migrate:
     profiles: [tools]

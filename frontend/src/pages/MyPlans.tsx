@@ -44,7 +44,7 @@ export function MyPlans() {
     return () => window.clearInterval(interval)
   }, [authorization.status, refreshConnections])
   const mine = plans.filter(plan => plan.own && !plan.archived)
-  const planFilter = tab === 'incoming' ? params.get('plan') : null
+  const planFilter = ['incoming', 'outgoing', 'archive'].includes(tab) ? params.get('plan') : null
   const responses = (tab === 'incoming' ? incomingResponses : outgoingResponses).filter(response => !response.archived && (!planFilter || response.planId === planFilter))
   const responseTab = tab === 'incoming' || tab === 'outgoing'
   const activeResponses = responses.filter(isActiveResponse).sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
@@ -54,7 +54,7 @@ export function MyPlans() {
   return <>
     <div className="heading-with-action">{tab === 'archive' ? <PageHeading eyebrow="Твоя история" title="Архив" /> : <PageHeading eyebrow="Лучшее — ещё впереди" title="Твои маленькие" italic="большие планы">Идеи, которые ты выбрал, и истории, которые ещё только начинаются</PageHeading>}<Link className="button button-outline" to="/create"><Plus size={18} />Создать план</Link></div>
     <nav className="filter-row plans-tabs" aria-label="Разделы моих планов" ref={navigation}>{tabs.map(([key, label]) => <button className={`chip ${tab === key ? 'selected' : ''}`} key={key} aria-pressed={tab === key} onClick={() => setParams(key === 'all' ? {} : { tab: key })}>{label}{key === 'incoming' && incomingResponses.some(isActiveResponse) ? ` · ${incomingResponses.filter(isActiveResponse).length}` : ''}</button>)}</nav>
-    {authorization.status !== 'verified' ? <EmptyState title="Войди, чтобы увидеть свои планы" action="Моя анкета" to="/profile">Планы сохраняются в твоём аккаунте на сервере</EmptyState> : tab === 'all' || tab === 'archive' ? <ActivityFeed key={`${authorization.userId}:${tab}`} archive={tab === 'archive'} revision={revision} onCancel={setCancelling} /> : <>
+    {authorization.status !== 'verified' ? <EmptyState title="Войди, чтобы увидеть свои планы" action="Моя анкета" to="/profile">Планы сохраняются в твоём аккаунте на сервере</EmptyState> : tab === 'all' || tab === 'archive' ? <ActivityFeed key={`${authorization.userId}:${tab}:${planFilter ?? ''}`} archive={tab === 'archive'} revision={revision} onCancel={setCancelling} planId={planFilter ?? undefined} /> : <>
       <button className="text-link" type="button" disabled={plansLoading || connectionsLoading} onClick={() => { void refreshPlans(); void refreshConnections() }}>{plansLoading || connectionsLoading ? 'Обновляем…' : 'Обновить планы'}</button>
       {(plansError || planError || connectionsError) && <p role="alert" className="field-error">{planError || plansError || connectionsError}</p>}
       {!count && (plansLoading || connectionsLoading) ? <p role="status">Загружаем планы и отклики…</p> : null}

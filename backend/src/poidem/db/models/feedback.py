@@ -3,6 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    BigInteger,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -44,6 +45,7 @@ class SurveyRecipient(Base):
     )
     callback_token_hash: Mapped[str | None] = mapped_column(Text, unique=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    comment_prompt_message_id: Mapped[int | None] = mapped_column(BigInteger)
 
 
 class FeedbackAnswer(Base):

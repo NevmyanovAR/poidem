@@ -4,6 +4,7 @@ from typing import Any
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -40,6 +41,7 @@ class BotBinding(Base):
         state_type("bot_access_state", "unknown", "allowed", "denied"), server_default="unknown"
     )
     last_interaction_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    notifications_enabled: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
 
 
 class NotificationJob(IdentityMixin, CreatedMixin, Base):
@@ -53,6 +55,9 @@ class NotificationJob(IdentityMixin, CreatedMixin, Base):
             name="lease_pair",
         ),
         Index("ix_notification_jobs_due", "state", "next_attempt_at"),
+        Index(
+            "ix_notification_jobs_lease", "lease_until", postgresql_where=text("state = 'leased'")
+        ),
         Index("ix_notification_jobs_recipient_created", "recipient_id", "created_at"),
     )
     kind: Mapped[str] = mapped_column(Text)

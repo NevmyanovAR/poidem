@@ -154,7 +154,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   const loadMatch = useCallback((id: string) => readConnection(() => client.match(id)), [client, readConnection])
   const loadContact = useCallback((id: string) => readConnection(() => client.contact(id)), [client, readConnection])
   const loadPlanResponses = useCallback((id: string, cursor?: string) => readConnection(() => client.planResponses(id, cursor)), [client, readConnection])
-  const loadActivity = useCallback((scope: 'active' | 'archive', includeHidden: boolean, cursor?: string) => readConnection(() => client.activity(scope, includeHidden, cursor)), [client, readConnection])
+  const loadActivity = useCallback((scope: 'active' | 'archive', includeHidden: boolean, cursor?: string, planId?: string) => readConnection(() => client.activity(scope, includeHidden, cursor, planId)), [client, readConnection])
   const hideArchive = useCallback((planId: string, hidden: boolean) => readConnection(() => client.archiveVisibility(planId, hidden)), [client, readConnection])
   const loadChat = useCallback((id: string) => readConnection(() => client.chat(id)), [client, readConnection])
   const loadMessages = useCallback((id: string, direction?: { before?: number; after?: number }) => readConnection(() => client.messages(id, direction)), [client, readConnection])

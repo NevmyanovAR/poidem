@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Серверная основа Telegram Mini App Пойдём?"
 requires-python = ">=3.13,<3.14"
 dependencies = [
+  "aiogram>=3.34,<4",
   "fastapi>=0.115,<1",
   "uvicorn>=0.54,<0.55",
   "SQLAlchemy[asyncio]>=2.0.36,<2.1",

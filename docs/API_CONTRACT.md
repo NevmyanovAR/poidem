@@ -1,5 +1,9 @@
 # Проект контракта API
 
+Версия 0.10 / D54: GET /me/activity принимает необязательный UUID plan_id для прямого перехода из бота в архив. Роли, scope, скрытие и пагинация сохраняются; cursor привязан к фильтру, прежние cursor без plan_id совместимы. Новых endpoints/операций записи/миграций нет. [Контракт ссылок](BOT_UX.md#прямые-переходы)
+
+Версия 0.9 / D53: новых HTTP-endpoints нет. Бот получает private updates напрямую Bot API, не принимает клиентский Telegram ID через публичный bind API. Прежние команды откликов/решений/чата транзакционно создают notification_jobs; клиенты не назначают kind/recipient/payload. Опрос и настройки доступны командами/кнопками бота, каждый callback проверяет участника и срок. Существующие защищённые маршруты Mini App сохраняются. [События, поля и гарантии](BOT_STAGE6.md)
+
 Версия 0.8 / D52: endpoints и миграции прежние. ResponseDTO дополнен display_status (waiting|accepted|rejected|closed|expired|cancelled|unavailable) и decided_at (nullable UTC). status по-прежнему отражает БД; expired/cancelled/unavailable вычисляются только для waiting и не записываются как статусы отклика. GET /plans/{id}/responses с limit/cursor читается автором и для архивного плана, включая все результаты; чужой пользователь — 404, без сессии — 401. GET /me/activity активного scope больше не выдаёт истёкшие outgoing как активные. [Поля, семантика и права](RESPONSE_HISTORY_UX.md#api-и-хранение)
 
 Версия 0.7 / D51 / migration 0006: endpoints прежние. ResponseDTO дополнен viewer_role (author|responder), history_context и match для accepted. MatchDTO содержит viewer_role. История отказа использует неизменяемый минимальный снимок, у rejected отправителю plan/profile остаются null. Все права/CSRF/квоты и D50 сохраняются. [Поля и семантика](CARDS_UX_REVIEW.md#изменённые-данные-и-api)

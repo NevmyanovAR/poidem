@@ -65,6 +65,21 @@ class Settings(BaseSettings):
     login_requests_per_minute: int = Field(default=30, ge=1, le=120)
     photo_requests_per_minute: int = Field(default=10, ge=1, le=60)
     chat_messages_per_minute: int = Field(default=30, ge=1, le=120)
+    telegram_bot_username: str = "ShallWeGoo_bot"
+    notifications_enabled: bool = True
+    notification_max_attempts: int = Field(default=5, ge=1, le=10)
+    notification_lease_seconds: int = Field(default=90, ge=60, le=300)
+    telegram_request_timeout_seconds: int = Field(default=10, ge=3, le=30)
+    chat_notification_window_seconds: int = Field(default=60, ge=30, le=600)
+
+    @field_validator("telegram_bot_username")
+    @classmethod
+    def bot_username(cls, value):
+        import re
+
+        if not re.fullmatch(r"[A-Za-z0-9_]{5,32}", value):
+            raise ValueError("Некорректный username бота")
+        return value
 
     @field_validator("telegram_bot_token", mode="before")
     @classmethod

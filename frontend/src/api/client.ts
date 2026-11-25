@@ -118,8 +118,8 @@ export class ApiClient {
       participants: value.participants.map(p => ({ role: p.role, profile: this.publicProfile(p.profile) })) }
   }
 
-  async activity(scope: 'active' | 'archive', includeHidden: boolean, cursor?: string): Promise<ActivityPage> {
-    const page = await this.request<{ items: { key: string; kind: ActivityItem['kind']; plan_id: string; archived: boolean; hidden: boolean; plan: PlanDTO | null; response: ResponseDTO | null; match: MatchDTO | null }[]; next_cursor: string | null }>(`/me/activity?scope=${scope}&include_hidden=${includeHidden}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`)
+  async activity(scope: 'active' | 'archive', includeHidden: boolean, cursor?: string, planId?: string): Promise<ActivityPage> {
+    const page = await this.request<{ items: { key: string; kind: ActivityItem['kind']; plan_id: string; archived: boolean; hidden: boolean; plan: PlanDTO | null; response: ResponseDTO | null; match: MatchDTO | null }[]; next_cursor: string | null }>(`/me/activity?scope=${scope}&include_hidden=${includeHidden}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}${planId ? `&plan_id=${encodeURIComponent(planId)}` : ''}`)
     return { nextCursor: page.next_cursor, items: page.items.map(item => ({ key: item.key, kind: item.kind, planId: item.plan_id,
       archived: item.archived, hidden: item.hidden, plan: item.plan ? planFromDTO(item.plan) : null,
       response: item.response ? this.responseFromDTO(item.response) : null, match: item.match ? this.matchFromDTO(item.match) : null })) }

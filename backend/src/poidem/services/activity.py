@@ -26,7 +26,9 @@ def selection(kind, identity, priority, stamp, descending=False):
     ]
 
 
-async def listing(session, actor, *, scope="active", include_hidden=False, cursor=None, limit=20):
+async def listing(
+    session, actor, *, scope="active", include_hidden=False, cursor=None, limit=20, plan_id=None
+):
     await plans.require_active(session, actor)
     at = plans.now()
     is_archive = scope == "archive"
@@ -81,6 +83,8 @@ async def listing(session, actor, *, scope="active", include_hidden=False, curso
         )
     queries = []
     for query in parts:
+        if plan_id is not None:
+            query = query.where(Plan.id == plan_id)
         query = query.where(archive.archived(at) if is_archive else ~archive.archived(at))
         if not include_hidden or not is_archive:
             query = query.where(
@@ -93,9 +97,12 @@ async def listing(session, actor, *, scope="active", include_hidden=False, curso
     query = select(combined)
     if cursor:
         try:
-            saved_scope, saved_hidden, priority, ordering, identity, kind = json.loads(
-                base64.b64decode(cursor, altchars=b"-_", validate=True)
-            )
+            saved = json.loads(base64.b64decode(cursor, altchars=b"-_", validate=True))
+            if not isinstance(saved, list) or len(saved) not in (6, 7):
+                raise ValueError
+            saved_scope, saved_hidden, priority, ordering, identity, kind = saved[:6]
+            if (saved[6] if len(saved) == 7 else None) != (str(plan_id) if plan_id else None):
+                raise ValueError
             ordering = Decimal(ordering)
             if (
                 saved_scope != scope
@@ -154,6 +161,7 @@ async def listing(session, actor, *, scope="active", include_hidden=False, curso
                     str(row.identity),
                     row.kind,
                 ]
+                + ([str(plan_id)] if plan_id else [])
             ).encode()
         ).decode()
     return ActivityPage(items=items, next_cursor=next_cursor)
