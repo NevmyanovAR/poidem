@@ -11,7 +11,7 @@ const initialPlan = (own = true) => ({
   title: own ? 'Собственный план' : 'План другого участника', category_code: 'art',
   description: 'Данные только браузерного теста', starts_at: `${tomorrow}T15:00:00Z`,
   time_zone: 'Europe/Moscow', place: 'Музей', publication_status: 'published', moderation_status: 'not_submitted',
-  created_at: new Date().toISOString(), version: 1, image: '/images/gallery.jpeg', own,
+  created_at: new Date().toISOString(), version: 1, image: '/images/gallery.jpeg', own, allowed_actions: own ? ['edit', 'cancel'] : [],
 })
 type TestPlan = ReturnType<typeof initialPlan>
 
@@ -38,6 +38,7 @@ async function api(page: Page, options: { own?: TestPlan[]; catalog?: TestPlan[]
     if (path === '/api/v1/me/responses' || path === '/api/v1/me/matches') return json({ items: [], next_cursor: null })
     if (path === '/api/v1/plans' && method === 'GET') return json({ items: state.catalog, next_cursor: null })
     const selected = [...state.own, ...state.catalog].find(item => path.startsWith(`/api/v1/plans/${item.id}`))
+    if (selected && path.endsWith('/view') && method === 'POST') return json({ recorded: !selected.own })
     if (selected && path.endsWith('/author')) return json({ profile: { name: selected.author.name, age: 24, bio: 'Анкета только браузерного теста', interests: ['Искусство', 'Кофе', 'Прогулки'], photo: { url: '/images/gallery.jpeg' } } })
     if (selected && path.endsWith('/capacity')) return json({ count: 0, maximum: 15, remaining: 15, can_respond: !selected.own, own_response_id: null })
     if (selected && method === 'GET') return json({ plan: selected })
@@ -50,7 +51,7 @@ async function api(page: Page, options: { own?: TestPlan[]; catalog?: TestPlan[]
       const fields = request.postDataJSON()
       state.keys.push(request.headers()['idempotency-key'])
       state.creations++; state.used++
-      const plan = { ...initialPlan(), ...fields, id: crypto.randomUUID(), publication_status: 'draft' }
+      const plan = { ...initialPlan(), ...fields, id: crypto.randomUUID(), publication_status: 'draft', allowed_actions: ['edit', 'cancel', 'publish'] }
       state.own.unshift(plan)
       return json({ plan }, 201)
     }
@@ -63,6 +64,7 @@ async function api(page: Page, options: { own?: TestPlan[]; catalog?: TestPlan[]
     }
     if (plan && method === 'POST' && (path.endsWith('/publish') || path.endsWith('/cancel'))) {
       plan.publication_status = path.endsWith('/publish') ? 'published' : 'cancelled'
+      plan.allowed_actions = plan.publication_status === 'cancelled' ? [] : ['edit', 'cancel']
       plan.version++
       return json({ plan })
     }
@@ -111,12 +113,14 @@ test('create, restore, publish, edit and cancel use the server without localStor
   expect(state.keys[0]).toMatch(/^[\da-f-]{36}$/)
   await page.getByRole('button', { name: 'Опубликовать', exact: true }).click()
   await expect(page.getByText('Опубликован', { exact: true })).toBeVisible()
+  await page.getByLabel('Действия со своим планом').click()
   await page.getByRole('link', { name: 'Изменить', exact: true }).click()
   await page.getByRole('textbox', { name: 'Название плана' }).fill('Изменённый серверный план')
   await page.getByRole('button', { name: 'Посмотреть план', exact: true }).click()
   await page.getByRole('button', { name: 'Сохранить изменения', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Изменённый серверный план' })).toBeVisible()
   expect(state.creations).toBe(1)
+  await page.getByLabel('Действия со своим планом').click()
   await page.getByRole('button', { name: 'Отменить план', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Отменить план', exact: true }).click()
   await page.getByRole('button', { name: 'Архив', exact: true }).click()
@@ -154,7 +158,7 @@ test('server quota blocks the fourth creation but does not block editing', async
 test('an unavailable API is shown as an error without fictional plans or a local quota fallback', async ({ page }) => {
   const state = await api(page, { unavailable: true })
   await launch(page, '/catalog')
-  await expect(page.getByText('Планы временно недоступны', { exact: true })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('Планы временно недоступны')
   await expect(page.locator('.plan-card')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Пока нет опубликованных планов' })).toHaveCount(0)
   await launch(page, '/create')

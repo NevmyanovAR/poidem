@@ -1,7 +1,9 @@
 """Полная metadata. Импортируется приложением, Alembic и тестами."""
 
 from poidem.db.models.accounts import AuthSession, User
+from poidem.db.models.bot_health import BotHeartbeat
 from poidem.db.models.chat import ArchiveHidden, ChatMessage, ChatReadState, ChatThread
+from poidem.db.models.editorial import EditorialIdea
 from poidem.db.models.feedback import FeedbackAnswer, ReliabilityEvent, Survey, SurveyRecipient
 from poidem.db.models.maintenance import MediaDeletion, RateLimitWindow
 from poidem.db.models.messaging import BotBinding, NotificationJob, TelegramUpdate
@@ -18,6 +20,8 @@ from poidem.db.models.profiles import (
 )
 
 __all__ = [
+    "BotHeartbeat",
+    "EditorialIdea",
     "ArchiveHidden",
     "ChatMessage",
     "ChatReadState",

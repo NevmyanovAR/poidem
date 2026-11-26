@@ -3,22 +3,32 @@
 import argparse
 import uuid
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.orm import Session
 
 from poidem.db.models import AdminAuditLog, User
+from poidem.services.admin_permissions import ROLES, TEAM_LOCK
 from poidem.settings import load_settings
 
 
 def assign_role(session, identity, role, reason):
+    session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": TEAM_LOCK})
     user = session.scalar(select(User).where(User.id == identity).with_for_update())
     if not user or user.account_status != "active":
         raise ValueError("Нужен существующий активный пользователь после Telegram-входа")
-    if role not in ("user", "admin") or len(reason.strip()) < 3:
-        raise ValueError("Нужны роль user/admin и причина")
+    if role not in ROLES or not 3 <= len(reason.strip()) <= 300:
+        raise ValueError("Нужны допустимая роль и причина от 3 до 300 символов")
     previous = user.role_code
     if previous == role:
         return False
+    if previous == "owner" and role != "owner":
+        owners = session.scalar(
+            select(func.count())
+            .select_from(User)
+            .where(User.role_code == "owner", User.account_status == "active")
+        )
+        if owners <= 1:
+            raise ValueError("Нельзя лишить систему последнего владельца")
     user.role_code = role
     user.version += 1
     session.add(
@@ -38,10 +48,10 @@ def assign_role(session, identity, role, reason):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Назначение роли локальным оператором; HTTP-аналога нет"
+        description="Доверенный оператор: первый owner и восстановление доступа"
     )
     parser.add_argument("--user-id", type=uuid.UUID, required=True)
-    parser.add_argument("--role", choices=("user", "admin"), required=True)
+    parser.add_argument("--role", choices=ROLES, required=True)
     parser.add_argument("--reason", required=True)
     parser.add_argument("--confirm-user-id", type=uuid.UUID, required=True)
     args = parser.parse_args()

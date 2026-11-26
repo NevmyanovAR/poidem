@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { returnTarget } from './navigation'
 
 interface Insets { top: number; bottom: number; left: number; right: number }
 interface TelegramWebApp {
@@ -46,7 +47,7 @@ function observeTelegram(setup: (app: TelegramWebApp) => (() => void) | void) {
 
 export function useTelegram() {
   const navigate = useNavigate()
-  const { pathname } = useLocation()
+  const { pathname, state, search } = useLocation()
   // A delayed or unavailable external SDK must not block the browser interface.
   // The presence of this bridge is never treated as authentication.
   useEffect(() => observeTelegram(app => {
@@ -72,10 +73,16 @@ export function useTelegram() {
 
   useEffect(() => observeTelegram(app => {
     if (!app.isVersionAtLeast('6.1')) return
-    const back = () => navigate(pathname === '/settings' ? '/profile' : pathname === '/settings/blocked' || pathname === '/admin' ? '/settings' : pathname.startsWith('/people/') ? '/catalog' : pathname === '/profile' ? '/' : '/home')
+    const back = () => {
+      if (!window.dispatchEvent(new Event('poidem:overlay-back', { cancelable: true }))) return
+      if (pathname.startsWith('/match/') && pathname.endsWith('/chat') && state?.fromMatch) {
+        navigate(pathname.slice(0, -5), { state: { returnTo: returnTarget(state, '/chats') } }); return
+      }
+      navigate(pathname === '/settings' ? '/profile' : pathname === '/settings/blocked' || pathname === '/admin' ? '/settings' : pathname.startsWith('/people/') ? returnTarget(state, '/catalog') : pathname.startsWith('/match/') ? returnTarget(state, '/chats') : pathname === '/plans' && search.includes('tab=incoming') ? '/plans?tab=own' : pathname === '/profile' ? '/' : '/home')
+    }
     if (pathname === '/' || pathname === '/home') app.BackButton.hide()
     else app.BackButton.show()
     app.BackButton.onClick(back)
     return () => { app.BackButton.offClick(back); app.BackButton.hide() }
-  }), [pathname, navigate])
+  }), [pathname, navigate, state, search])
 }

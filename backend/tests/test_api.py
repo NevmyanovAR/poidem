@@ -47,6 +47,11 @@ def test_no_public_personal_write_routes(client, path):
     )
     if path == "/api/v1/plans":
         assert response.status_code == 401
+    elif path == "/api/v1/admin/users":
+        # D61 добавляет только защищённый GET. Создания пользователей/ролей по POST нет.
+        assert response.status_code == 405
+        assert "POST" not in response.headers.get("allow", "")
+        assert client.get(path).status_code == 401
     else:
         assert response.status_code == 404
         assert response.json()["error"]["code"] == "RESOURCE_NOT_FOUND"

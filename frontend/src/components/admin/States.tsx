@@ -1,0 +1,2 @@
+export function Loading({ cards = false, count = 8 }: { cards?: boolean; count?: number }) { return <div className={cards ? 'admin-metrics' : 'admin-loading'} role="status" aria-label="Загрузка данных">{Array.from({ length: cards ? count : 4 }, (_, i) => <div className="admin-skeleton" key={i} />)}</div> }
+export function Failure({ error, retry }: { error: string; retry: () => void }) { return <div className="admin-error" role="alert"><p>{error}</p><button className="button button-outline" onClick={retry}>Повторить</button></div> }

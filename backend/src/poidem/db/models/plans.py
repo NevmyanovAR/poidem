@@ -31,6 +31,7 @@ class Category(Base):
 class Plan(IdentityMixin, CreatedMixin, Base):
     __tablename__ = "plans"
     __table_args__ = (
+        Index("ix_plans_created_id", "created_at", "id"),
         UniqueConstraint("id", "author_id", name="uq_plans_id_author_id"),
         CheckConstraint("length(btrim(title)) > 0", name="title_nonempty"),
         CheckConstraint("version > 0", name="version_positive"),
@@ -149,6 +150,7 @@ class PlanResponse(IdentityMixin, CreatedMixin, Base):
 class Match(IdentityMixin, CreatedMixin, Base):
     __tablename__ = "matches"
     __table_args__ = (
+        Index("ix_matches_created_id", "created_at", "id"),
         UniqueConstraint("plan_id", name="uq_matches_plan_id"),
         ForeignKeyConstraint(
             ["response_id", "plan_id", "author_id", "responder_id"],

@@ -130,11 +130,11 @@ test('admin queue, scoped evidence, decision confirmation and seven viewport siz
   await scenario().install(page, responder)
   let reviewed = false, decisions = 0
   const detail = () => ({ ...entry, state: reviewed ? 'reviewed' : 'pending', comment: 'Тестовое обращение', evidence: { title: '<img src=x onerror=alert(1)>', description: 'Контекст выбранного плана' }, can_hide_plan: !reviewed, decisions: reviewed ? [{ action: 'hide_plan', reason: 'Проверенное нарушение', actor: 'Тестовый администратор', actor_id: responder, decided_at: entry.created_at }] : [] })
-  await page.route('**/api/v1/admin/session', route => route.fulfill({ json: { role: 'admin' } }))
+  await page.route('**/api/v1/admin/session', route => route.fulfill({ json: { role: 'admin', permissions: ['analytics', 'users', 'plans', 'moderation', 'system', 'editorial'] } }))
   await page.route('**/api/v1/admin/reports?**', route => route.fulfill({ json: { items: reviewed ? [] : [entry], next_cursor: null } }))
   await page.route(`**/api/v1/admin/reports/${reportId}`, route => route.fulfill({ json: detail() }))
   await page.route(`**/api/v1/admin/reports/${reportId}/decision`, route => { expect(route.request().postDataJSON()).toEqual({ action: 'hide_plan', reason: 'Проверенное нарушение' }); decisions++; reviewed = true; return route.fulfill({ json: detail() }) })
-  await launch(page, '/admin')
+  await launch(page, '/admin?section=moderation')
   await page.locator('.admin-report').click()
   await expect(page.locator('.admin-detail h3').filter({ hasText: '<img' })).toBeVisible()
   await expect(page.locator('.admin-detail img')).toHaveCount(0)

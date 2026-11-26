@@ -11,9 +11,10 @@ import App from './App'
 import { ApiProvider } from './state/ApiProvider'
 import './theme.css'
 import './styles.css'
+import { PhotoViewerProvider } from './components/PhotoViewer'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter><ApiProvider><App /></ApiProvider></BrowserRouter>
+    <BrowserRouter><ApiProvider><PhotoViewerProvider><App /></PhotoViewerProvider></ApiProvider></BrowserRouter>
   </React.StrictMode>,
 )

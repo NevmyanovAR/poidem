@@ -1,5 +1,7 @@
 # Серверная основа «Пойдём?»
 
+Этап 9Б / D62: head **0010**, редакционные идеи, команда/роли и heartbeat прежнего бота. Перед новым запуском применить миграцию; owner автоматически не назначается. [Матрица прав, CLI первого owner, API, резервные копии и проверки](../docs/ADMIN_STAGE9B.md)
+
 Этап 7 / D55: миграция **0008**, жалобы/блокировки и административная очередь. Существующие PostgreSQL, сессия/CSRF и bot worker сохранены. Сначала `python -m alembic -c backend/alembic.ini upgrade head` из корня. Локальная команда роли — `python -m poidem.admin --help`. [API, безопасное назначение, PowerShell и ручной прогон](../docs/SAFETY_STAGE7.md)
 
 D53 / этап 6 / revision 0007: aiogram-бот и worker в одном процессе `python -m poidem.bot`; `/start`, управление уведомлениями, transactional outbox, согласованный опрос. Прежние 33 таблицы/пользователи/сессии, frontend не меняется. [Все команды PowerShell, env и настоящая доставка](../docs/BOT_STAGE6.md)

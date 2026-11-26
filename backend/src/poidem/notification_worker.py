@@ -87,23 +87,29 @@ async def claim(database, settings):
         return Lease(entry.id, owner, entry.recipient_id)
 
 
-async def payload(session, entry, binding, settings):
+async def payload(session, entry, binding, settings, diagnostic=None):
+    def skip(code):
+        if diagnostic is not None:
+            diagnostic["reason"] = code
+        return None
+
     if entry.kind == "post_meeting_survey":
-        return await surveys.delivery(session, entry, settings)
+        result = await surveys.delivery(session, entry, settings)
+        return result if result else skip("survey_unavailable")
     if entry.kind == "chat_message":
         match = await session.get(Match, uuid.UUID(entry.entity_ref["match_id"]))
         if not match or entry.recipient_id not in (match.author_id, match.responder_id):
-            return None
+            return skip("content_unavailable")
         plan = await session.get(Plan, match.plan_id)
         other_id = match.responder_id if entry.recipient_id == match.author_id else match.author_id
         if await safety.blocked(session, match.author_id, match.responder_id):
-            return None
+            return skip("pair_blocked")
         other = await session.get(User, other_id)
         if (
             other.account_status != "active"
             or plan.moderation_status not in plans.VISIBLE_MODERATION
         ):
-            return None
+            return skip("content_unavailable")
         role = "author" if match.author_id == entry.recipient_id else "responder"
         last_read = await session.scalar(
             select(ChatReadState.last_read_sequence).where(
@@ -130,17 +136,17 @@ async def payload(session, entry, binding, settings):
             .limit(1)
         )
         if not unseen:
-            return None
+            return skip("already_read_or_notified")
         entry.entity_ref = {**entry.entity_ref, "notified_through": unseen}
         return chat_message(plan.title), open_app(settings, f"match/{match.id}/chat", "Открыть чат")
     response = await session.get(PlanResponse, uuid.UUID(entry.entity_ref["response_id"]))
     if not response:
-        return None
+        return skip("content_unavailable")
     if await safety.blocked(session, response.plan_author_id, response.responder_id):
-        return None
+        return skip("pair_blocked")
     plan = await session.get(Plan, response.plan_id)
     if not plan or plan.moderation_status not in plans.VISIBLE_MODERATION:
-        return None
+        return skip("content_unavailable")
     expected = {
         "response_received": "waiting",
         "response_accepted": "accepted",
@@ -149,17 +155,17 @@ async def payload(session, entry, binding, settings):
     }.get(entry.kind)
     target = response.plan_author_id if entry.kind == "response_received" else response.responder_id
     if expected is None or response.status != expected or target != entry.recipient_id:
-        return None
+        return skip("response_changed")
     if entry.kind == "response_received":
         if plan.publication_status != "published" or plan.starts_at <= plans.now():
-            return None
+            return skip("plan_unavailable")
         return response_message(entry.kind, response.history_context, plan.title), open_app(
             settings, f"plans?tab=incoming&plan={plan.id}", "Посмотреть отклик"
         )
     if entry.kind == "response_accepted":
         match = await session.scalar(select(Match).where(Match.response_id == response.id))
         if not match:
-            return None
+            return skip("content_unavailable")
         return response_message(entry.kind, response.history_context, plan.title), open_app(
             settings, f"match/{match.id}", "Открыть мэтч"
         )
@@ -254,10 +260,15 @@ class NotificationWorker:
                     )
             if next_at > plans.now():
                 return None, "cooldown", next_at
-            result = await payload(session, entry, binding, self.settings)
+            diagnostic = {}
+            result = await payload(session, entry, binding, self.settings, diagnostic)
             # Callback hash и состояние опроса устойчивы до внешней отправки.
             await session.commit()
-            return ((binding.private_chat_id, *result) if result else None), "event_obsolete", None
+            return (
+                ((binding.private_chat_id, *result) if result else None),
+                diagnostic.get("reason", "event_obsolete"),
+                None,
+            )
 
     async def run_once(self):
         if self.pause_until and self.pause_until > plans.now():
@@ -346,12 +357,25 @@ class NotificationWorker:
         await self.finish(lease, "retry", code, retry_at=plans.now() + delay)
 
     async def run(self):
+        from contextlib import suppress
+        from time import monotonic
+
+        from poidem.services.bot_health import beat
+
+        last_beat = 0.0
         while True:
             try:
                 worked = await self.run_once()
+                if monotonic() - last_beat >= 10:
+                    await beat(self.database, "worker")
+                    last_beat = monotonic()
             except RuntimeError:
                 raise
             except Exception:
                 logger.warning("notification_queue_unavailable")
+                if monotonic() - last_beat >= 10:
+                    with suppress(Exception):
+                        await beat(self.database, "worker", "error")
+                    last_beat = monotonic()
                 worked = False
             await asyncio.sleep(0.1 if worked else 1)

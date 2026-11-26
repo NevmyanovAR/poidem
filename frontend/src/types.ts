@@ -49,6 +49,7 @@ export interface Plan {
   timeZone?: string
   updatedAt?: string
   archived?: boolean
+  allowedActions?: ('edit' | 'cancel' | 'publish')[]
 }
 
 export type PlanInput = Pick<Plan, 'title' | 'category' | 'date' | 'time' | 'place' | 'description'>
@@ -84,8 +85,11 @@ export interface MatchContact { available: boolean; telegramUrl: string | null; 
 export interface ChatMessage { id: string; sequence: number; sender: 'self' | 'other'; text: string; createdAt: string; clientId: string | null }
 export interface ChatState { matchId: string; lastSequence: number; lastReadSequence: number; otherLastReadSequence: number; unreadCount: number; canSend: boolean; meetingCancelled: boolean; archived: boolean }
 export interface MessagePage { items: ChatMessage[]; nextBefore: number | null; hasMore: boolean }
-export interface ActivityItem { key: string; kind: 'plan' | 'incoming' | 'outgoing' | 'match'; planId: string; archived: boolean; hidden: boolean; plan: PublishedPlan | null; response: PlanResponse | null; match: PairMatch | null }
+export interface ActivityItem { key: string; kind: 'plan' | 'incoming' | 'outgoing' | 'match'; planId: string; archived: boolean; hidden: boolean; plan: PublishedPlan | null; response: PlanResponse | null; match: PairMatch | null; pendingResponseCount: number; matchId: string | null; history: boolean }
 export interface ActivityPage { items: ActivityItem[]; nextCursor: string | null }
+export interface NavigationSummary { pendingResponses: number; unreadMessages: number; unreadDialogs: number }
+export interface Dialog { match: PairMatch; lastMessage: Pick<ChatMessage, 'text' | 'sender' | 'createdAt'> | null; lastActivityAt: string }
+export interface DialogPage { items: Dialog[]; nextCursor: string | null }
 
 // Only a verified server response may supply published plans and public author data.
 export interface PublishedPlan extends Plan {

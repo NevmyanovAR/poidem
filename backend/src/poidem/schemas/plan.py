@@ -83,6 +83,7 @@ class PlanDTO(BaseModel):
     own: bool
     updated_at: datetime
     archived: bool = False
+    allowed_actions: list[str] = Field(default_factory=list)
 
 
 class PlanPage(BaseModel):

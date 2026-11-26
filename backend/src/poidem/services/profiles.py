@@ -117,8 +117,17 @@ async def save_profile(session, actor, payload: ProfileWrite) -> tuple[OwnProfil
 
 
 async def delete_account(session, actor) -> list[str]:
+    from poidem.services.admin_permissions import team_lock
+
+    await team_lock(session)
     await session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": actor.telegram_id})
     user = await lock_actor(session, actor, active=False)
+    if user.role_code == "owner":
+        raise AppError(
+            409,
+            "OWNER_ACCOUNT",
+            "Перед удалением аккаунта передай права владельца и отзови собственную роль",
+        )
     photos = (await session.scalars(select(Photo).where(Photo.owner_id == user.id))).all()
     # До определения судьбы совместных записей нельзя удалять чужую историю.
     handled = {"users", "profiles", "photos", "auth_sessions", "bot_bindings", "analytics_events"}

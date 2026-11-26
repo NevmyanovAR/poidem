@@ -1,5 +1,7 @@
 # Архитектура backend «Пойдём?»
 
+**D62:** тот же монолит расширен services/admin_permissions.py, admin_team.py, editorial.py, admin_system.py и bot_health.py; routes/admin_management.py. Роли в прежнем User, редакционные идеи PostgreSQL вместо статического frontend-массива, минимальные heartbeat в том же bot/worker. Миграция 0010, без второй админки, очереди, пользователей или внешней инфраструктуры. [Архитектура и права](ADMIN_STAGE9B.md)
+
 D55: модуль services/safety.py и api/routers/safety.py расширяют прежний монолит для жалоб, персональных блокировок и закрытой модерации. Роли прежних User, сессия/CSRF прежние, административный frontend — /admin в том же React. Миграция 0008 меняет прежние таблицы; notification_jobs остаётся единственной очередью. B06/B11 уточнены заданием этапа 7 в рамках [SAFETY_STAGE7](SAFETY_STAGE7.md); санкции/апелляции/B10/B13 не согласованы
 
 D53 / этап 6: Bot API polling и outbox worker запускаются одним процессом того же Python-проекта, без нового сервера/брокера/БД. API только пишет durable jobs вместе с событием; сеть — вне транзакции, lease/fencing и сериализация получателя в PostgreSQL. B09 отдельно утверждён пользователем; feedback не превращается в рейтинг/доказанный факт. [Реализованный объём](BOT_STAGE6.md)

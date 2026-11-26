@@ -23,7 +23,11 @@ class BodyLimitMiddleware:
 
         from poidem.api.errors import AppError, error_response
 
-        limit = self.photo_max_bytes + 65536 if scope["path"] == "/api/v1/me/photos" else 16384
+        photo_upload = scope["path"] == "/api/v1/me/photos" or (
+            scope["path"].startswith("/api/v1/admin/inspiration/")
+            and scope["path"].endswith("/photo")
+        )
+        limit = self.photo_max_bytes + 65536 if photo_upload else 16384
         parts = []
         length = 0
         while True:

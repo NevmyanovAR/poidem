@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, Request, Response
 
 from poidem.api.routers.account import Authenticated, Session, WriteActor
 from poidem.api.routers.plans import check_context
-from poidem.schemas.safety import AdminDecisionWrite, ReportWrite, SafetyContext, Target
+from poidem.schemas.safety import AdminDecisionWrite, Reason, ReportWrite, SafetyContext, Target
 from poidem.services import candidates, safety
 
 router = APIRouter(prefix="/api/v1", tags=["Безопасность"], dependencies=[Depends(check_context)])
@@ -40,8 +40,10 @@ async def unblock(block_id: uuid.UUID, actor: WriteActor, session: Session):
 
 @router.get("/admin/session")
 async def admin_session(actor: Authenticated, session: Session):
-    await safety.require_admin(session, actor)
-    return {"role": "admin"}
+    from poidem.services.admin_permissions import PERMISSIONS, require
+
+    user = await require(session, actor)
+    return {"role": user.role_code, "permissions": PERMISSIONS[user.role_code]}
 
 
 @router.get("/admin/reports")
@@ -50,11 +52,22 @@ async def admin_reports(
     session: Session,
     state: Literal["pending", "reviewed"] | None = None,
     target_type: Target | None = None,
+    reason_code: Reason | None = None,
+    user_id: uuid.UUID | None = None,
+    plan_id: uuid.UUID | None = None,
     cursor: str | None = Query(None, max_length=512),
     limit: int = Query(20, ge=1, le=50),
 ):
     return await safety.admin_reports(
-        session, actor, state=state, target_type=target_type, cursor=cursor, limit=limit
+        session,
+        actor,
+        state=state,
+        target_type=target_type,
+        cursor=cursor,
+        limit=limit,
+        reason_code=reason_code,
+        user_id=user_id,
+        plan_id=plan_id,
     )
 
 

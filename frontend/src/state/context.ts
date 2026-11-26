@@ -2,8 +2,16 @@ import { createContext, useContext } from 'react'
 import type { ApiClient } from '../api/client'
 import type { AuthorizationState, AppState, Plan, PlanInput, Profile, PublishedPlan, PublicProfile, PairMatch, PlanResponse, ResponseCapacity, MatchContact, ActivityPage, ChatState, ChatMessage, MessagePage, ResponsePage } from '../types'
 import type { CreationQuota } from '../lib/planRules'
+import type { DialogPage, NavigationSummary } from '../types'
 
 export interface AppContextValue {
+  admin: Pick<ApiClient, 'adminAnalytics' | 'adminExport' | 'adminUsers' | 'adminUser' | 'adminPlans' | 'adminPlan' | 'adminSystem' | 'adminTeam' | 'adminRole' | 'adminAudit' | 'adminNotifications' | 'adminIdeas' | 'adminCreateIdea' | 'adminEditIdea' | 'adminIdeaCommand' | 'adminIdeaPhoto' | 'mediaUrl'>
+  editorial: Pick<ApiClient, 'ideas' | 'idea' | 'mediaUrl'>
+  trackPlanView: (id: string) => Promise<{ recorded: boolean }>
+  navigationSummary: NavigationSummary | null
+  refreshNavigation: () => Promise<void>
+  activityRevision: number
+  loadDialogs: (cursor?: string) => Promise<DialogPage>
   meeting: Pick<ApiClient, 'survey' | 'saveFeedback' | 'reliability'>
   safety: Pick<ApiClient, 'report' | 'block' | 'blocks' | 'unblock' | 'adminSession' | 'adminReports' | 'adminReport' | 'adminDecision' | 'reportPhotoUrl'>
   data: AppState
@@ -38,7 +46,7 @@ export interface AppContextValue {
   loadMatch: (id: string) => Promise<PairMatch>
   loadContact: (id: string) => Promise<MatchContact>
   loadPlanResponses: (id: string, cursor?: string) => Promise<ResponsePage>
-  loadActivity: (scope: 'active' | 'archive', includeHidden: boolean, cursor?: string, planId?: string) => Promise<ActivityPage>
+  loadActivity: (scope: 'active' | 'archive', includeHidden: boolean, cursor?: string, planId?: string, view?: 'all' | 'own') => Promise<ActivityPage>
   hideArchive: (planId: string, hidden: boolean) => Promise<void>
   loadChat: (id: string) => Promise<ChatState>
   loadMessages: (id: string, direction?: { before?: number; after?: number }) => Promise<MessagePage>

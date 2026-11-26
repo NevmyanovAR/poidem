@@ -7,7 +7,8 @@ from poidem.api.routers.account import Authenticated, Session, WriteActor
 from poidem.api.routers.plans import check_context
 from poidem.schemas.activity import ActivityPage, HiddenCommand
 from poidem.schemas.chat import ChatDTO, MessageCreate, MessageEnvelope, MessagePage, ReadCommand
-from poidem.services import activity, archive, chat
+from poidem.schemas.inbox import DialogPage, NavigationDTO
+from poidem.services import activity, archive, chat, inbox
 
 router = APIRouter(
     prefix="/api/v1", tags=["Переписка и архив"], dependencies=[Depends(check_context)]
@@ -61,6 +62,7 @@ async def my_activity(
     cursor: str | None = Query(None, max_length=512),
     limit: int = Query(20, ge=1, le=50),
     plan_id: uuid.UUID | None = None,
+    view: Literal["all", "own"] = "all",
 ):
     return await activity.listing(
         session,
@@ -70,7 +72,23 @@ async def my_activity(
         cursor=cursor,
         limit=limit,
         plan_id=plan_id,
+        view=view,
     )
+
+
+@router.get("/me/chats", response_model=DialogPage)
+async def dialogs(
+    actor: Authenticated,
+    session: Session,
+    cursor: str | None = Query(None, max_length=512),
+    limit: int = Query(20, ge=1, le=50),
+):
+    return await inbox.dialogs(session, actor, cursor=cursor, limit=limit)
+
+
+@router.get("/me/navigation", response_model=NavigationDTO)
+async def navigation(actor: Authenticated, session: Session):
+    return await inbox.navigation(session, actor)
 
 
 @router.post("/me/archive/{plan_id}/visibility", status_code=204)

@@ -47,7 +47,7 @@ function SettingsContent() {
     <div className="settings-rows">
       <Link className="settings-row" to="/settings/blocked"><Shield size={21} /><span><strong>Безопасность</strong><small>Заблокированные пользователи</small></span><ChevronRight size={18} /></Link>
       <a className="settings-row" href={notificationUrl} target="_blank" rel="noopener noreferrer" onClick={event => { const app = window.Telegram?.WebApp; if (app?.openTelegramLink) { event.preventDefault(); app.openTelegramLink(notificationUrl) } }}><Bell size={21} /><span><strong>Уведомления</strong><small>Уведомления от бота</small></span><ChevronRight size={18} /></a>
-      {userId && role === 'admin' && <Link className="settings-row" to="/admin"><ShieldCheck size={21} /><span><strong>Панель модерации</strong><small>Рассмотрение жалоб</small></span><ChevronRight size={18} /></Link>}
+      {userId && role === 'admin' && <Link className="settings-row" to="/admin"><ShieldCheck size={21} /><span><strong>Управление приложением</strong><small>Кабинет сотрудника</small></span><ChevronRight size={18} /></Link>}
     </div>
     {userId && role === 'checking' && <p className="small-note" role="status">Загружаем настройки…</p>}
     {userId && role === 'error' && <p className="field-error" role="alert">Часть настроек недоступна <button type="button" className="text-link" onClick={() => { setRole('checking'); setRetry(value => value + 1) }}>Повторить</button></p>}

@@ -29,6 +29,7 @@ class ChatThread(Base):
 class ChatMessage(IdentityMixin, CreatedMixin, Base):
     __tablename__ = "chat_messages"
     __table_args__ = (
+        Index("ix_chat_messages_created_id", "created_at", "id"),
         UniqueConstraint("match_id", "sequence", name="uq_chat_messages_sequence"),
         UniqueConstraint("match_id", "sender_id", "client_id", name="uq_chat_messages_retry"),
         CheckConstraint("sequence > 0", name="sequence_positive"),

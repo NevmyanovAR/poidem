@@ -15,7 +15,7 @@ test('expired waiting reply is compact history for either role without decision 
       await expect(client.locator('.response-history-entry')).toContainText(viewer === author ? 'Тестовый участник, 24' : 'Автор: Тестовый автор')
       await expect(client.locator('.response-history-entry time')).toContainText('Отклик')
       await expect(client.locator('.response-history-entry a')).toHaveCount(0)
-      await expect(client.getByRole('button', { name: /Полученные отклики/ })).not.toContainText('· 1')
+      await expect(client.locator('.mobile-nav a[href^="/plans"] .nav-count')).toHaveCount(0)
     }
     expect(mock.state.attempts[0].status).toBe('waiting')
   } finally { await owner.close() }

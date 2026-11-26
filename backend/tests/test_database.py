@@ -62,7 +62,7 @@ def test_migrations_create_complete_schema(runtime_engine):
     tables = set(inspect(runtime_engine).get_table_names())
     assert set(Base.metadata.tables) <= tables
     with runtime_engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0008"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "0010"
 
 
 def test_roles_are_not_superusers(runtime_engine, migration_engine):

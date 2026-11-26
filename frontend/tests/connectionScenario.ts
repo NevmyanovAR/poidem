@@ -1,3 +1,4 @@
+import { editorialIdeas } from './helpers/editorial'
 import { expect, type Page } from '@playwright/test'
 
 // Только контракт браузерного UI: синтетические ответы перехватываются в тесте.
@@ -22,7 +23,8 @@ export function scenario(options: { full?: boolean; matched?: boolean; noUsernam
   const plan = (viewer: string) => ({ id: planId, author: { id: author, name: profileFor(author).name },
     title: options.long ? 'Достопримечательности'.repeat(4).slice(0, 80) : 'Тестовый вечер в галерее', category_code: 'art', description: 'Синтетический план браузерного теста',
     starts_at: planTime, time_zone: 'Europe/Moscow', place: options.long ? 'Длинный адрес встречи '.repeat(7).slice(0, 160) : 'Тестовая галерея', publication_status: state.matched ? 'closed' : 'published',
-    moderation_status: 'not_submitted', created_at: startsAt, version: state.matched ? 3 : 2, image: '/images/gallery.jpeg', own: viewer === author, archived: state.archived })
+    moderation_status: 'not_submitted', created_at: startsAt, version: state.matched ? 3 : 2, image: '/images/gallery.jpeg', own: viewer === author, archived: state.archived,
+    allowed_actions: viewer === author && !state.archived && !state.matched && !state.attempts.length ? ['edit', 'cancel'] : [] })
   const response = (attempt: Attempt, viewer: string) => {
     const display = attempt.displayStatus ?? (attempt.status === 'waiting' && options.expired ? 'expired' : attempt.status)
     return { ...attempt, plan_id: planId, plan: attempt.status === 'rejected' && viewer === responder ? null : plan(viewer), created_at: attempt.createdAt ?? recordedAt,
@@ -45,6 +47,8 @@ export function scenario(options: { full?: boolean; matched?: boolean; noUsernam
       await page.route('**/api/v1/**', async route => {
         const req = route.request(), url = new URL(req.url()), path = url.pathname
         const json = (value: unknown, status = 200) => route.fulfill({ status, json: value })
+        if (path === '/api/v1/inspiration') return json({ items: editorialIdeas, total: 3, next_offset: null })
+        if (path.startsWith('/api/v1/inspiration/')) { const idea = editorialIdeas.find(item => path.endsWith('/' + item.id)); return idea ? json(idea) : json({ error: { code: 'IDEA_NOT_FOUND', message: 'Идея недоступна' } }, 404) }
         if (path === '/api/v1/auth/telegram') return json({ user: { id: viewer, account_status: 'active' }, csrf_token: 'synthetic-only',
           authorization: { method: 'telegram_init_data', verified_at: startsAt },
           profile: { user_id: viewer, name: profileFor(viewer).name, age: 24, gender_code: 'woman', preference_code: 'any', bio: 'Тест', photo: { id: viewer, url: '/images/gallery.jpeg' }, interest_ids: ['art', 'coffee', 'walks'], version: 1, moderation_status: 'not_submitted' } })
@@ -53,6 +57,14 @@ export function scenario(options: { full?: boolean; matched?: boolean; noUsernam
         if (path === '/api/v1/me/reliability') return json({ unique_confirmed_partners: 0, policy_version: 'D58-mutual-unique-partners-v1' })
         if (path === `/api/v1/matches/${matchId}/survey`) return json({ availability: 'upcoming', opens_at: '2099-01-02T18:00:00Z', closes_at: '2099-01-09T16:00:00Z', can_answer: false, own_answer: null, other_answered: false, result: { result: 'no_data', author_answered: false, responder_answered: false }, policy_version: 'D53-2h-1to5-optional-comment-edit7d' })
         if (path === '/api/v1/me/quotas') return json({ maximum: 3, used: 1, remaining: 2, day: '2099-01-01', time_zone: 'Europe/Moscow' })
+        if (path === `/api/v1/plans/${planId}/view` && req.method() === 'POST') return json({ recorded: true })
+        if (path === '/api/v1/me/navigation') return json({ pending_responses: viewer === author && !state.matched && !state.archived && !options.expired ? state.attempts.filter(item => item.status === 'waiting').length : 0,
+          unread_messages: state.matched ? unread(viewer) : 0, unread_dialogs: state.matched && unread(viewer) > 0 ? 1 : 0 })
+        if (path === '/api/v1/me/chats') {
+          const last = state.messages.at(-1)
+          return json({ items: state.matched ? [{ match: match(viewer), last_activity_at: last?.created_at ?? match(viewer).created_at,
+            last_message: last ? { text: last.text, sender: last.senderId === viewer ? 'self' : 'other', created_at: last.created_at } : null }] : [], next_cursor: null })
+        }
         if (path === '/api/v1/me/plans') return json({ items: viewer === author ? [plan(viewer)] : [], next_cursor: null })
         const rejected = state.attempts.some(attempt => attempt.status === 'rejected' && (attempt.responderId ?? responder) === viewer)
         if (path === '/api/v1/plans') return json({ items: viewer !== author && !state.matched && !rejected ? [plan(viewer)] : [], next_cursor: null })
@@ -63,6 +75,8 @@ export function scenario(options: { full?: boolean; matched?: boolean; noUsernam
         if (path === '/api/v1/me/matches') return json({ items: state.matched ? [match(viewer)] : [], next_cursor: null })
         if (path === '/api/v1/me/activity') {
           const archived = url.searchParams.get('scope') === 'archive', includeHidden = url.searchParams.get('include_hidden') === 'true'
+          if (url.searchParams.get('view') === 'own') return json({ items: viewer === author && archived === state.archived ? [{ key: `plan:${planId}`, kind: 'plan', plan_id: planId, plan: plan(viewer), response: null, match: null,
+            hidden: false, archived, history: state.matched || !!options.expired, pending_response_count: !state.matched && !options.expired ? state.attempts.filter(item => item.status === 'waiting').length : 0, match_id: state.matched ? matchId : null }] : [], next_cursor: null })
           const items = []
           if (archived === state.archived && (!state.hidden.has(viewer) || includeHidden)) {
             const base = { plan_id: planId, archived, hidden: state.hidden.has(viewer), plan: null, response: null, match: null }

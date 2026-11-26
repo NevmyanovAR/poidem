@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 class User(IdentityMixin, CreatedMixin, Base):
     __tablename__ = "users"
     __table_args__ = (
+        Index("ix_users_created_id", "created_at", "id"),
         UniqueConstraint("telegram_user_id"),
         UniqueConstraint("id", "telegram_user_id", name="uq_users_id_telegram_user_id"),
         CheckConstraint("telegram_user_id > 0", name="telegram_id_positive"),
@@ -35,7 +36,8 @@ class User(IdentityMixin, CreatedMixin, Base):
         state_type("account_status", "active", "blocked"), server_default="active"
     )
     role_code: Mapped[str] = mapped_column(
-        state_type("role_code", "user", "admin"), server_default="user"
+        state_type("role_code", "user", "analyst", "moderator", "admin", "owner"),
+        server_default="user",
     )
     version: Mapped[int] = mapped_column(server_default="1")
     profile: Mapped["Profile | None"] = relationship(viewonly=True, lazy="raise")

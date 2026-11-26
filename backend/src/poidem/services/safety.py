@@ -19,7 +19,6 @@ from poidem.db.models import (
     PlanResponse,
     Profile,
     Report,
-    User,
     UserRestriction,
 )
 from poidem.security.session import lock_actor
@@ -386,22 +385,37 @@ async def unblock(session, actor, identity):
 
 
 async def require_admin(session, actor, *, write=False):
-    user = (
-        await lock_actor(session, actor)
-        if write
-        else await session.get(User, actor.user_id, populate_existing=True)
-    )
-    if not user or user.account_status != "active" or user.role_code != "admin":
-        raise AppError(403, "ADMIN_REQUIRED", "Этот раздел доступен только администратору")
+    from poidem.services.admin_permissions import require
+
+    return await require(session, actor, "moderation", write=write)
 
 
-async def admin_reports(session, actor, *, state=None, target_type=None, cursor=None, limit=20):
+async def admin_reports(
+    session,
+    actor,
+    *,
+    state=None,
+    target_type=None,
+    cursor=None,
+    limit=20,
+    reason_code=None,
+    user_id=None,
+    plan_id=None,
+):
     await require_admin(session, actor)
     query = select(Report)
     if state:
         query = query.where(Report.state == state)
     if target_type:
         query = query.where(Report.target_type == target_type)
+    if reason_code:
+        query = query.where(Report.reason_code == reason_code)
+    if user_id:
+        from poidem.services.admin_dashboard import reports_for_user
+
+        query = query.where(reports_for_user(user_id))
+    if plan_id:
+        query = query.where(Report.plan_id == plan_id)
     if cursor:
         from sqlalchemy import tuple_
 

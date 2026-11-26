@@ -61,7 +61,7 @@ test('author portrait and compact hierarchy keep the invitation above navigation
 for (const photo of ['missing', 'error'] as const) test(`unavailable author photo (${photo}) has a neutral placeholder and preserves actions`, async ({ page }, testInfo) => {
   const { mock } = await detail(page, { photo })
   await launch(page, `/people/${planId}`)
-  await expect(page.getByRole('img', { name: 'Фотография автора недоступна', exact: true })).toBeVisible()
+  await expect(page.getByRole('img', { name: 'Фотография недоступна', exact: true })).toBeVisible()
   await expect(page.locator('.person-photo img')).toHaveCount(0)
   await expect(page.locator('.person-photo')).toContainText('Фото пока недоступно')
   await expect(page.getByRole('button', { name: 'Пойдём?', exact: true })).toBeEnabled()
@@ -83,7 +83,7 @@ test('public experience is a positive badge without a number; personal statistic
   expect(await badge.innerText()).not.toMatch(/\d/u)
   await expect(page.locator('[aria-label*="Уникальных партнёров"]')).toHaveCount(0)
   person.experience.unique_confirmed_partners = 0
-  await page.getByRole('button', { name: 'Обновить план', exact: true }).click()
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
   await expect(page.locator('.person-photo img')).toBeVisible()
   await expect.poll(() => page.locator('.person-photo img').evaluate(element => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
   await expect(badge).toHaveCount(0)
@@ -103,7 +103,7 @@ for (const state of ['blocked', 'full'] as const) test(`${state} server capacity
   else await expect(page.getByText('Сейчас откликнуться на этот план нельзя', { exact: true })).toBeVisible()
   await page.getByText('Есть подтверждённые встречи', { exact: true }).click()
   await page.getByText('Об авторе и плане', { exact: true }).click()
-  await page.getByRole('button', { name: 'Обновить план', exact: true }).click()
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
   await expect(invite).toBeDisabled()
   expect(mock.state.attempts).toHaveLength(0)
 })

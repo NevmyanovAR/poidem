@@ -13,6 +13,9 @@ class ActivityItem(BaseModel):
     plan_id: uuid.UUID
     archived: bool
     hidden: bool
+    pending_response_count: int = 0
+    match_id: uuid.UUID | None = None
+    history: bool = False
     plan: PlanDTO | None = None
     response: ResponseDTO | None = None
     match: MatchDTO | None = None

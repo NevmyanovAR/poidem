@@ -250,6 +250,8 @@ class BotHandler:
 async def polling(handler):
     # Публичный getUpdates aiogram; offset двигается только после устойчивой обработки.
     # start_polling по умолчанию подтверждает update до окончания отдельной task.
+    from poidem.services.bot_health import beat
+
     offset = None
     while True:
         try:
@@ -259,6 +261,7 @@ async def polling(handler):
                 request_timeout=30,
                 allowed_updates=["message", "my_chat_member", "callback_query"],
             )
+            await beat(handler.database, "polling")
             for event in updates:
                 attempts = 0
                 while True:
@@ -289,6 +292,8 @@ async def polling(handler):
         except TelegramRetryAfter as error:
             await asyncio.sleep(max(1, error.retry_after))
         except (TelegramNetworkError, TelegramServerError, OSError):
+            with suppress(Exception):
+                await beat(handler.database, "polling", "error")
             logger.warning("bot_polling_temporarily_unavailable")
             await asyncio.sleep(5)
         except Exception:
@@ -347,8 +352,13 @@ async def serve(settings, *, check=False):
                 for task in tasks:
                     task.cancel()
                 for task in tasks:
-                    with suppress(asyncio.CancelledError):
+                    with suppress(asyncio.CancelledError, Exception):
                         await task
+                from poidem.services.bot_health import beat
+
+                with suppress(Exception):
+                    await beat(database, "polling", "stopped")
+                    await beat(database, "worker", "stopped")
     finally:
         await bot.session.close()
         await database.close()

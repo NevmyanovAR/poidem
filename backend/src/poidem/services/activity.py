@@ -10,7 +10,7 @@ from sqlalchemy import case, func, literal, or_, select, tuple_, union_all
 from poidem.api.errors import AppError
 from poidem.db.models import ArchiveHidden, Match, Plan, PlanResponse
 from poidem.schemas.activity import ActivityItem, ActivityPage
-from poidem.services import archive, connections, plans
+from poidem.services import archive, connections, inbox, plans
 
 
 def selection(kind, identity, priority, stamp, descending=False):
@@ -27,19 +27,54 @@ def selection(kind, identity, priority, stamp, descending=False):
 
 
 async def listing(
-    session, actor, *, scope="active", include_hidden=False, cursor=None, limit=20, plan_id=None
+    session,
+    actor,
+    *,
+    scope="active",
+    include_hidden=False,
+    cursor=None,
+    limit=20,
+    plan_id=None,
+    view="all",
 ):
     await plans.require_active(session, actor)
     at = plans.now()
     is_archive = scope == "archive"
+    last_decision = (
+        select(func.max(PlanResponse.decided_at))
+        .where(PlanResponse.plan_id == Plan.id)
+        .correlate(Plan)
+        .scalar_subquery()
+    )
+    event_at = func.greatest(
+        Plan.updated_at,
+        func.coalesce(last_decision, Plan.updated_at),
+        case((Plan.starts_at <= at, Plan.starts_at), else_=Plan.updated_at),
+    )
     exists_match = select(Match.id).where(Match.plan_id == Plan.id).exists()
     membership = or_(Match.author_id == actor.user_id, Match.responder_id == actor.user_id)
     pair = (
-        select(*selection("match", Match.id, 0, Match.meeting_starts_at))
+        select(
+            *selection(
+                "match",
+                Match.id,
+                0,
+                event_at if is_archive else Match.meeting_starts_at,
+                is_archive,
+            )
+        )
         .join(Plan, Plan.id == Match.plan_id)
         .where(membership)
     )
-    mine = select(*selection("plan", Plan.id, 2, Plan.starts_at)).where(
+    mine = select(
+        *selection(
+            "plan",
+            Plan.id,
+            0 if is_archive else 2,
+            event_at if is_archive else Plan.starts_at,
+            is_archive,
+        )
+    ).where(
         Plan.author_id == actor.user_id,
         ~exists_match,
         Plan.publication_status.in_(("published", "draft")) if not is_archive else literal(True),
@@ -60,7 +95,15 @@ async def listing(
             Plan.publication_status.in_(("published", "draft")),
         )
     outgoing = (
-        select(*selection("outgoing", PlanResponse.id, 3, PlanResponse.created_at, True))
+        select(
+            *selection(
+                "outgoing",
+                PlanResponse.id,
+                0 if is_archive else 3,
+                event_at if is_archive else PlanResponse.created_at,
+                True,
+            )
+        )
         .join(Plan, Plan.id == PlanResponse.plan_id)
         .where(
             PlanResponse.responder_id == actor.user_id,
@@ -81,6 +124,32 @@ async def listing(
                 Plan.starts_at > at,
             )
         )
+    if view == "own":
+        pending = inbox.pending_for_plan(at)
+        published = (
+            (Plan.publication_status == "published")
+            & (Plan.starts_at > at)
+            & Plan.moderation_status.in_(plans.VISIBLE_MODERATION)
+        )
+        priority = case(
+            (published & (pending > 0), 0),
+            (published, 1),
+            (Plan.publication_status == "draft", 2),
+            else_=3,
+        )
+        ordering = case(
+            (published, func.extract("epoch", Plan.starts_at)),
+            else_=-func.extract("epoch", event_at),
+        )
+        parts = [
+            select(
+                literal("plan").label("kind"),
+                Plan.id.label("identity"),
+                Plan.id.label("plan_id"),
+                (literal(0) if is_archive else priority).label("priority"),
+                (-func.extract("epoch", event_at) if is_archive else ordering).label("ordering"),
+            ).where(Plan.author_id == actor.user_id)
+        ]
     queries = []
     for query in parts:
         if plan_id is not None:
@@ -93,15 +162,17 @@ async def listing(
                 .exists()
             )
         queries.append(query)
-    combined = union_all(*queries).subquery()
+    combined = (queries[0] if len(queries) == 1 else union_all(*queries)).subquery()
     query = select(combined)
     if cursor:
         try:
             saved = json.loads(base64.b64decode(cursor, altchars=b"-_", validate=True))
-            if not isinstance(saved, list) or len(saved) not in (6, 7):
+            if not isinstance(saved, list) or len(saved) not in (6, 7, 8):
+                raise ValueError
+            if (saved[7] if len(saved) == 8 else "all") != view:
                 raise ValueError
             saved_scope, saved_hidden, priority, ordering, identity, kind = saved[:6]
-            if (saved[6] if len(saved) == 7 else None) != (str(plan_id) if plan_id else None):
+            if (saved[6] if len(saved) >= 7 else None) != (str(plan_id) if plan_id else None):
                 raise ValueError
             ordering = Decimal(ordering)
             if (
@@ -144,6 +215,14 @@ async def listing(
             item.match = await connections.match_dto(session, actor, entry)
         elif row.kind == "plan":
             item.plan = await plans.get_plan(session, actor, row.identity)
+            if view == "own":
+                item.pending_response_count = await session.scalar(
+                    select(inbox.pending_for_plan(at)).where(Plan.id == row.plan_id)
+                )
+                item.match_id = await session.scalar(
+                    select(Match.id).where(Match.plan_id == row.plan_id, membership)
+                )
+                item.history = row.priority == 3
         else:
             entry = await connections.response_record(session, actor, row.identity)
             item.response = await connections.response_dto(session, actor, entry)
@@ -161,7 +240,13 @@ async def listing(
                     str(row.identity),
                     row.kind,
                 ]
-                + ([str(plan_id)] if plan_id else [])
+                + (
+                    [str(plan_id) if plan_id else None, view]
+                    if view != "all"
+                    else [str(plan_id)]
+                    if plan_id
+                    else []
+                )
             ).encode()
         ).decode()
     return ActivityPage(items=items, next_cursor=next_cursor)

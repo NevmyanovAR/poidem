@@ -174,7 +174,7 @@ async def cleanup_loop(database, settings: Settings) -> None:
 
 async def collect_orphans(database, settings: Settings) -> None:
     """Файлы незавершённой записи после аварии: часовой запас для активных запросов."""
-    from poidem.db.models import Photo
+    from poidem.db.models import EditorialIdea, Photo
 
     cutoff = datetime.now(UTC).timestamp() - 3600
 
@@ -206,6 +206,13 @@ async def collect_orphans(database, settings: Settings) -> None:
             (
                 await session.scalars(
                     select(Photo.storage_key).where(Photo.storage_key.in_(candidates))
+                )
+            ).all()
+        )
+        known.update(
+            (
+                await session.scalars(
+                    select(EditorialIdea.image_key).where(EditorialIdea.image_key.in_(candidates))
                 )
             ).all()
         )

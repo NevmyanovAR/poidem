@@ -3,6 +3,9 @@ import type { Plan, PlanInput, Profile, PublishedPlan, PlanResponse, PublicProfi
 import type { CreationQuota } from '../lib/planRules'
 import type { BlockedUser, ReportDetail, ReportReason, SafetyContext, SafetyReport, SafetyTarget } from './safety'
 import type { Experience, FeedbackInput, SurveyState } from './feedback'
+import type { DialogPage, NavigationSummary } from '../types'
+import type { AdminPeriod, AnalyticsReport, AdminPage, AdminUser, AdminPlan, AdminSystem } from './admin'
+import type { AdminAccess, StaffRole, StaffMember, OffsetPage, AuditEntry, NotificationTask, EditorialIdea, EditorialFields } from './admin'
 
 interface PhotoDTO { id: string; url: string }
 interface ProfileDTO {
@@ -22,6 +25,7 @@ interface PlanDTO {
   publication_status: NonNullable<Plan['publicationStatus']>; moderation_status: NonNullable<Plan['moderation']>['status']
   created_at: string; version: number; image: string; own: boolean
   updated_at?: string; archived?: boolean
+  allowed_actions?: ('edit' | 'cancel' | 'publish')[]
 }
 interface PublicProfileDTO { name: string; age: number; bio: string; interests: string[]; photo: { url: string }; experience?: Experience }
 interface ResponseDTO {
@@ -66,6 +70,7 @@ function planFromDTO(dto: PlanDTO): PublishedPlan {
     label: statusLabels[dto.publication_status], published: dto.publication_status === 'published',
     createdAt: dto.created_at, serverVersion: dto.version,
     updatedAt: dto.updated_at, archived: dto.archived ?? false,
+    allowedActions: dto.allowed_actions ?? [],
     moderation: { status: dto.moderation_status, source: 'server' },
   }
 }
@@ -87,6 +92,26 @@ const configured = import.meta.env.VITE_API_BASE_URL?.trim()
 const base = configured || (import.meta.env.DEV ? '/api/v1' : '')
 
 export class ApiClient {
+  adminTeam(filters: Record<string, string>, cursor?: string): Promise<AdminPage<StaffMember>> { return this.request(`/admin/team?${new URLSearchParams({ ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value)), ...(cursor ? { cursor } : {}) })}`) }
+  adminRole(member: StaffMember, role: StaffRole, reason: string): Promise<{ changed: boolean }> { return this.track(() => this.request(`/admin/team/${encodeURIComponent(member.id)}/role`, { method: 'PUT', body: JSON.stringify({ role, version: member.version, confirm_user_id: member.id, reason }) })) }
+  adminAudit(filters: Record<string, string>): Promise<OffsetPage<AuditEntry>> { return this.request(`/admin/audit?${new URLSearchParams(filters)}`) }
+  adminNotifications(filters: Record<string, string>): Promise<OffsetPage<NotificationTask>> { return this.request(`/admin/notifications?${new URLSearchParams(filters)}`) }
+  adminIdeas(filters: Record<string, string>): Promise<OffsetPage<EditorialIdea>> { return this.request(`/admin/inspiration?${new URLSearchParams(Object.fromEntries(Object.entries(filters).filter(([, value]) => value)))}`) }
+  adminCreateIdea(id: string, fields: EditorialFields): Promise<EditorialIdea> { return this.track(() => this.request('/admin/inspiration', { method: 'POST', body: JSON.stringify({ id, ...fields }) })) }
+  adminEditIdea(idea: EditorialIdea, fields: EditorialFields): Promise<EditorialIdea> { return this.track(() => this.request(`/admin/inspiration/${encodeURIComponent(idea.id)}`, { method: 'PUT', body: JSON.stringify({ ...fields, version: idea.version }) })) }
+  adminIdeaCommand(idea: EditorialIdea, action: 'publish' | 'unpublish' | 'delete'): Promise<EditorialIdea | { deleted: boolean }> { return this.track(() => this.request(`/admin/inspiration/${encodeURIComponent(idea.id)}/command`, { method: 'POST', body: JSON.stringify({ action, version: idea.version, confirm_id: idea.id }) })) }
+  adminIdeaPhoto(idea: EditorialIdea, file: File): Promise<EditorialIdea> { const body = new FormData(); body.set('file', file); return this.track(() => this.request(`/admin/inspiration/${encodeURIComponent(idea.id)}/photo?version=${idea.version}`, { method: 'POST', body })) }
+  ideas(offset = 0): Promise<OffsetPage<EditorialIdea>> { return this.request(`/inspiration?offset=${offset}`) }
+  idea(id: string): Promise<EditorialIdea> { return this.request(`/inspiration/${encodeURIComponent(id)}`) }
+  mediaUrl(path: string | null): string { return !path ? '' : path.startsWith('/api/') ? new URL(path, new URL(base || '/api/v1', window.location.origin).origin).toString() : path }
+  adminAnalytics(period: AdminPeriod): Promise<AnalyticsReport> { return this.request(`/admin/analytics?${new URLSearchParams({ ...period })}`) }
+  adminExport(period: AdminPeriod): Promise<{ report: AnalyticsReport; csv: string; filename: string }> { return this.track(() => this.request('/admin/analytics/export', { method: 'POST', body: JSON.stringify(period) })) }
+  adminUsers(filters: Record<string, string>, cursor?: string): Promise<AdminPage<AdminUser>> { return this.request(`/admin/users?${new URLSearchParams({ ...filters, ...(cursor ? { cursor } : {}) })}`) }
+  adminUser(id: string): Promise<AdminUser> { return this.request(`/admin/users/${encodeURIComponent(id)}`) }
+  adminPlans(filters: Record<string, string>, cursor?: string): Promise<AdminPage<AdminPlan>> { return this.request(`/admin/plans?${new URLSearchParams({ ...filters, ...(cursor ? { cursor } : {}) })}`) }
+  adminPlan(id: string): Promise<AdminPlan> { return this.request(`/admin/plans/${encodeURIComponent(id)}`) }
+  adminSystem(): Promise<AdminSystem> { return this.request('/admin/system') }
+  trackPlanView(id: string): Promise<{ recorded: boolean }> { return this.track(() => this.request(`/plans/${encodeURIComponent(id)}/view`, { method: 'POST' })) }
   report(context: SafetyContext, reason_code: ReportReason, comment: string): Promise<SafetyReport> {
     return this.track(() => this.request('/reports', { method: 'POST', body: JSON.stringify({ ...context, reason_code, comment: comment.trim() || null }) }))
   }
@@ -99,12 +124,15 @@ export class ApiClient {
     return { items: page.items.map(item => ({ ...item, photo_url: item.photo_url ? new URL(item.photo_url, origin).toString() : null })) }
   }
   unblock(id: string): Promise<void> { return this.track(() => this.request(`/me/blocks/${encodeURIComponent(id)}`, { method: 'DELETE' })) }
-  adminSession(): Promise<{ role: 'admin' }> { return this.request('/admin/session') }
-  adminReports(state: string, target: string, cursor?: string): Promise<{ items: SafetyReport[]; next_cursor: string | null }> {
+  adminSession(): Promise<AdminAccess> { return this.request('/admin/session') }
+  adminReports(state: string, target: string, cursor?: string, filters: { reason?: string; user?: string; plan?: string } = {}): Promise<{ items: SafetyReport[]; next_cursor: string | null }> {
     const params = new URLSearchParams()
     if (state) params.set('state', state)
     if (target) params.set('target_type', target as SafetyTarget)
     if (cursor) params.set('cursor', cursor)
+    if (filters.reason) params.set('reason_code', filters.reason)
+    if (filters.user) params.set('user_id', filters.user)
+    if (filters.plan) params.set('plan_id', filters.plan)
     return this.request(`/admin/reports?${params}`)
   }
   adminReport(id: string): Promise<ReportDetail> { return this.request(`/admin/reports/${encodeURIComponent(id)}`) }
@@ -145,11 +173,21 @@ export class ApiClient {
       participants: value.participants.map(p => ({ role: p.role, profile: this.publicProfile(p.profile) })) }
   }
 
-  async activity(scope: 'active' | 'archive', includeHidden: boolean, cursor?: string, planId?: string): Promise<ActivityPage> {
-    const page = await this.request<{ items: { key: string; kind: ActivityItem['kind']; plan_id: string; archived: boolean; hidden: boolean; plan: PlanDTO | null; response: ResponseDTO | null; match: MatchDTO | null }[]; next_cursor: string | null }>(`/me/activity?scope=${scope}&include_hidden=${includeHidden}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}${planId ? `&plan_id=${encodeURIComponent(planId)}` : ''}`)
+  async activity(scope: 'active' | 'archive', includeHidden: boolean, cursor?: string, planId?: string, view: 'all' | 'own' = 'all'): Promise<ActivityPage> {
+    const page = await this.request<{ items: { key: string; kind: ActivityItem['kind']; plan_id: string; archived: boolean; hidden: boolean; plan: PlanDTO | null; response: ResponseDTO | null; match: MatchDTO | null; pending_response_count?: number; match_id?: string | null; history?: boolean }[]; next_cursor: string | null }>(`/me/activity?scope=${scope}&include_hidden=${includeHidden}&view=${view}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}${planId ? `&plan_id=${encodeURIComponent(planId)}` : ''}`)
     return { nextCursor: page.next_cursor, items: page.items.map(item => ({ key: item.key, kind: item.kind, planId: item.plan_id,
       archived: item.archived, hidden: item.hidden, plan: item.plan ? planFromDTO(item.plan) : null,
-      response: item.response ? this.responseFromDTO(item.response) : null, match: item.match ? this.matchFromDTO(item.match) : null })) }
+      response: item.response ? this.responseFromDTO(item.response) : null, match: item.match ? this.matchFromDTO(item.match) : null,
+      pendingResponseCount: item.pending_response_count ?? 0, matchId: item.match_id ?? null, history: item.history ?? false })) }
+  }
+  async navigation(): Promise<NavigationSummary> {
+    const value = await this.request<{ pending_responses: number; unread_messages: number; unread_dialogs: number }>('/me/navigation')
+    return { pendingResponses: value.pending_responses, unreadMessages: value.unread_messages, unreadDialogs: value.unread_dialogs }
+  }
+  async dialogs(cursor?: string): Promise<DialogPage> {
+    const page = await this.request<{ items: { match: MatchDTO; last_message: Pick<MessageDTO, 'text' | 'sender' | 'created_at'> | null; last_activity_at: string }[]; next_cursor: string | null }>(`/me/chats${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`)
+    return { nextCursor: page.next_cursor, items: page.items.map(value => ({ match: this.matchFromDTO(value.match), lastActivityAt: value.last_activity_at,
+      lastMessage: value.last_message ? { text: value.last_message.text, sender: value.last_message.sender, createdAt: value.last_message.created_at } : null })) }
   }
   archiveVisibility(planId: string, hidden: boolean): Promise<void> {
     return this.track(() => this.request(`/me/archive/${encodeURIComponent(planId)}/visibility`, { method: 'POST', body: JSON.stringify({ hidden }) }))

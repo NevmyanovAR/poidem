@@ -114,7 +114,7 @@ def joined_plans():
     )
 
 
-def dto(row, actor) -> PlanDTO:
+def dto(row, actor, allowed_actions=()) -> PlanDTO:
     from poidem.services.archive import is_archived
 
     plan, name, image = row
@@ -135,7 +135,50 @@ def dto(row, actor) -> PlanDTO:
         own=plan.author_id == actor.user_id,
         updated_at=plan.updated_at,
         archived=is_archived(plan),
+        allowed_actions=list(allowed_actions),
     )
+
+
+async def action_permissions(session, actor, entries):
+    """Проекция прежних editable/command, без ослабления проверки самой команды."""
+    from poidem.services.archive import is_archived
+
+    own = [entry for entry in entries if entry.author_id == actor.user_id]
+    if not own:
+        return {}
+    profile = await session.get(Profile, actor.user_id)
+    user = await session.get(User, actor.user_id)
+    if (
+        not user
+        or user.account_status != "active"
+        or not profile
+        or profile.moderation_status not in VISIBLE_MODERATION
+    ):
+        return {}
+    identities = [entry.id for entry in own]
+    related = set(
+        (
+            await session.scalars(
+                select(PlanResponse.plan_id).where(PlanResponse.plan_id.in_(identities))
+            )
+        ).all()
+    )
+    related.update(
+        (await session.scalars(select(Match.plan_id).where(Match.plan_id.in_(identities)))).all()
+    )
+    result = {}
+    for entry in own:
+        if (
+            entry.id in related
+            or is_archived(entry)
+            or entry.moderation_status not in VISIBLE_MODERATION
+            or entry.publication_status not in ("draft", "published")
+        ):
+            continue
+        result[entry.id] = ["edit", "cancel"]
+        if entry.publication_status == "draft" and entry.starts_at > now():
+            result[entry.id].append("publish")
+    return result
 
 
 async def get_plan(session, actor, plan_id: uuid.UUID) -> PlanDTO:
@@ -155,7 +198,8 @@ async def get_plan(session, actor, plan_id: uuid.UUID) -> PlanDTO:
         )
         if allowed is None:
             raise AppError(404, "PLAN_NOT_FOUND", "Этот план не найден")
-    return dto(row, actor)
+    permissions = await action_permissions(session, actor, [plan])
+    return dto(row, actor, permissions.get(plan.id, ()))
 
 
 def encode_cursor(stamp: datetime, identity: uuid.UUID) -> str:
@@ -207,7 +251,11 @@ async def list_plans(
         if len(rows) > limit
         else None
     )
-    return PlanPage(items=[dto(row, actor) for row in page], next_cursor=next_cursor)
+    permissions = await action_permissions(session, actor, [row[0] for row in page]) if own else {}
+    return PlanPage(
+        items=[dto(row, actor, permissions.get(row[0].id, ())) for row in page],
+        next_cursor=next_cursor,
+    )
 
 
 async def create(session, actor, fields: PlanFields, key: uuid.UUID) -> tuple[PlanDTO, bool]:
@@ -318,12 +366,17 @@ async def command(session, actor, plan_id, payload, action: str) -> PlanDTO:
     if plan.publication_status not in ("draft", "published"):
         raise AppError(409, "PLAN_NOT_EDITABLE", "Этот план уже закрыт или отменён")
     if action == "publish":
+        first_publication = plan.publication_status == "draft"
         await validate_fields(
             session,
             PlanFields.model_validate({key: getattr(plan, key) for key in PlanFields.model_fields}),
         )
         plan.publication_status = "published"
         plan.moderation_status = "not_submitted"
+        if first_publication:
+            from poidem.services.analytics_events import PUBLISHED, record
+
+            await record(session, PUBLISHED, actor.user_id, plan.id)
     else:
         plan.publication_status = "cancelled"
         plan.archived_at = now()

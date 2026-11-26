@@ -1,8 +1,17 @@
-import { ArrowUpRight } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { INSPIRATION } from '../data/editorial'
-import { PageHeading, Photo } from '../components/ui'
+import { useCallback, useState } from 'react'
+import { PageHeading } from '../components/ui'
+import { InspirationCard } from '../components/InspirationCard'
+import { useResource } from '../components/admin/common'
+import { useAppData } from '../state/context'
 
 export function Inspiration() {
-  return <><PageHeading eyebrow="Когда хочется чего-то особенного" title="А что, если" italic="вместе?">Места, впечатления и маленькие приключения<br />Сохрани настроение — и преврати его в план</PageHeading><div className="inspiration-grid">{INSPIRATION.map((idea, i) => <article className={`inspiration-card inspiration-${i}`} key={idea.id}><Link className="inspiration-photo" to={`/create?idea=${idea.id}`} aria-label={`Создать план: ${idea.title}`}><Photo src={idea.image} alt={idea.title} eager={i === 0} /><span className="photo-tag">{idea.tag}</span><span className="photo-arrow"><ArrowUpRight size={21} /></span></Link><div className="inspiration-copy"><span className="eyebrow">0{i + 1} / {idea.category}</span><h2>{idea.title}</h2><p>{idea.subtitle}</p><Link className="text-link" to={`/create?idea=${idea.id}`}>Создать план здесь<ArrowUpRight size={18} /></Link></div></article>)}</div></>
+  const { editorial } = useAppData()
+  const [offset, setOffset] = useState(0)
+  const load = useCallback(() => editorial.ideas(offset), [editorial, offset])
+  const resource = useResource(String(offset), load)
+  return <><PageHeading eyebrow="Когда хочется чего-то особенного" title="А что, если" italic="вместе?">Места, впечатления и маленькие приключения<br />Сохрани настроение — и преврати его в план</PageHeading>
+    {resource.loading && !resource.data && <p role="status">Загружаем идеи…</p>}
+    {resource.error && <div role="alert"><p>{resource.error}</p><button className="text-link" onClick={resource.refresh}>Повторить загрузку</button></div>}
+    {resource.data && <><div className="inspiration-grid">{resource.data.items.map((idea, i) => <InspirationCard key={idea.id} idea={idea} image={editorial.mediaUrl(idea.image)} index={offset + i} />)}</div>{!resource.data.items.length && <p>Новые идеи скоро появятся</p>}{(offset > 0 || resource.data.next_offset != null) && <div className="form-actions"><button className="button button-outline" disabled={offset === 0 || resource.loading} onClick={() => setOffset(Math.max(0, offset - 25))}>Назад</button><button className="button button-outline" disabled={resource.data.next_offset == null || resource.loading} onClick={() => setOffset(resource.data!.next_offset!)}>Далее</button></div>}</>}
+  </>
 }

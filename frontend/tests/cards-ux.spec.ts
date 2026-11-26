@@ -10,21 +10,21 @@ test('meeting dates use one Russian format, actual zone, year boundary and DST',
   expect(meetingDateLabel({ startsAt: '2027-03-14T14:00:00Z', timeZone: 'America/New_York' }, now)).toBe('14 марта 2027, 10:00')
 })
 
-test('accepted replies stay in matches with compact cards and direct chat actions for both roles', async ({ page, browser }, testInfo) => {
+test('accepted replies live in chats and retain direct meeting details for both roles', async ({ page, browser }, testInfo) => {
   const mock = scenario({ matched: true, noUsername: true })
   mock.state.attempts.push({ id: crypto.randomUUID(), status: 'accepted', version: 2 })
   const owner = await browser.newPage()
   try {
     await mock.install(page, responder); await mock.install(owner, author)
-    for (const [client, paths, partner] of [[page, ['/plans', '/plans?tab=matches'], 'Тестовый автор'], [owner, ['/plans?tab=matches'], 'Тестовый участник']] as const) {
+    for (const [client, paths, partner] of [[page, ['/chats', '/plans?tab=matches'], 'Тестовый автор'], [owner, ['/plans?tab=matches'], 'Тестовый участник']] as const) {
       for (const path of paths) {
         await launch(client, path)
-        const card = client.locator('[data-record-kind="match"]')
+        const card = client.locator('.dialog-card')
         await expect(card).toHaveCount(1)
         await expect(card).toContainText(`${partner}, 24`)
         await expect(card.locator('.interest-tags, .review-description')).toHaveCount(0)
-        await expect(card.getByRole('link', { name: 'Написать', exact: true })).toHaveAttribute('href', `/match/${matchId}/chat`)
-        await expect(card.getByRole('link', { name: 'Подробнее', exact: true })).toHaveAttribute('href', `/match/${matchId}`)
+        await expect(card.locator('.dialog-open')).toHaveAttribute('href', `/match/${matchId}/chat`)
+        await expect(card.getByRole('link', { name: 'О встрече', exact: true })).toHaveAttribute('href', `/match/${matchId}`)
         await expect(card.getByRole('link')).toHaveCount(2)
         await expect(card).not.toContainText('Europe/Moscow')
         if (path.includes('incoming') || path.includes('outgoing')) await card.screenshot({ path: testInfo.outputPath(path.includes('incoming') ? 'match-author.png' : 'match-responder.png') })
@@ -33,10 +33,10 @@ test('accepted replies stay in matches with compact cards and direct chat action
     for (const [client, path] of [[page, '/plans?tab=outgoing'], [owner, '/plans?tab=incoming']] as const) {
       await launch(client, path)
       await expect(client.locator('[data-record-kind="match"]')).toHaveCount(0)
-      await expect(client.getByText('Подтверждённые пары находятся в разделе «Мэтчи»')).toBeVisible()
+      await expect(client.getByText('Подтверждённые пары и встречи доступны в')).toBeVisible()
     }
     await launch(owner, '/plans?tab=matches')
-    await owner.locator('[data-record-kind="match"]').getByRole('link', { name: 'Написать', exact: true }).click()
+    await owner.locator('.dialog-open').click()
     await expect(owner).toHaveURL(`/match/${matchId}/chat`)
     await expect(owner.getByLabel('Сообщение', { exact: true })).toBeEnabled()
   } finally { await owner.close() }
@@ -57,10 +57,9 @@ test('archive refresh keeps layout, existing cards and scroll during delay and f
   await expect(page.locator('.my-plan')).toHaveCount(1)
   await expect(page.getByRole('heading', { name: 'Архив', exact: true })).toBeVisible()
   const heading = await page.getByRole('heading', { name: 'Архив', exact: true }).boundingBox()
-  const refresh = page.getByRole('button', { name: 'Обновить список', exact: true })
-  const button = await refresh.boundingBox(), toggle = await page.getByLabel('Показать скрытые').boundingBox()
-  expect(heading!.y + heading!.height).toBeLessThan(button!.y)
-  expect(button!.y + button!.height).toBeLessThanOrEqual(toggle!.y)
+  await expect(page.getByRole('button', { name: 'Обновить список', exact: true })).toHaveCount(0)
+  const toggle = await page.getByLabel('Показать скрытые').boundingBox()
+  expect(heading!.y + heading!.height).toBeLessThan(toggle!.y)
   const card = await page.locator('.my-plan').elementHandle(), layout = await page.locator('main').elementHandle()
   await page.evaluate(() => window.scrollTo({ top: 60, behavior: 'instant' }))
   const beforeScroll = await page.evaluate(() => scrollY)
@@ -68,8 +67,8 @@ test('archive refresh keeps layout, existing cards and scroll during delay and f
   let reloads = 0
   page.on('framenavigated', frame => { if (frame === page.mainFrame()) reloads++ })
   delay = true; fail = true
-  await refresh.click()
-  await expect(page.getByRole('button', { name: 'Обновляем…', exact: true })).toHaveAttribute('aria-busy', 'true')
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await expect.poll(() => !!release).toBe(true)
   expect(await card!.evaluate(element => element.isConnected)).toBe(true)
   expect(await layout!.evaluate(element => element.isConnected)).toBe(true)
   expect(await page.evaluate(() => scrollY)).toBe(beforeScroll)
@@ -81,16 +80,16 @@ test('archive refresh keeps layout, existing cards and scroll during delay and f
 
 test('long content, interests and tabs fit narrow screens; arrow interactions do not shift layout', async ({ page }, testInfo) => {
   test.setTimeout(120000)
-  const mock = scenario({ matched: true, long: true, noUsername: true })
+  const mock = scenario({ matched: true, archived: true, long: true, noUsername: true })
   await mock.install(page, responder)
   for (const width of [320, 360, 375, 390, 430, 1366]) {
     await page.setViewportSize({ width, height: 900 })
-    await launch(page, '/plans?tab=matches')
+    await launch(page, '/plans?tab=archive')
     const card = page.locator('[data-record-kind="match"]')
     await expect(card).toHaveCount(1)
     await page.evaluate(() => document.fonts.ready)
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
-    const tab = page.getByRole('button', { name: 'Мэтчи', exact: true })
+    const tab = page.getByRole('button', { name: 'Архив', exact: true })
     await expect.poll(async () => {
       const button = await tab.boundingBox(), row = await page.getByRole('navigation', { name: 'Разделы моих планов' }).boundingBox()
       return button!.x + button!.width - row!.x - row!.width
@@ -126,7 +125,7 @@ test('long content, interests and tabs fit narrow screens; arrow interactions do
     expect(overflow).toBeLessThanOrEqual(1)
   }
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await launch(page, '/plans?tab=matches')
+  await launch(page, '/plans?tab=archive')
   const link = page.locator('.record-match').getByRole('link', { name: 'Подробнее', exact: true })
   await link.hover()
   expect(await link.locator('.action-arrow svg').evaluate(element => getComputedStyle(element).transform)).toBe('none')
@@ -141,19 +140,17 @@ test('pending candidate interests wrap within the card and published actions sta
     await launch(page, '/plans?tab=incoming')
     const card = page.locator('[data-record-kind="incoming"]')
     await expect(card).toHaveCount(1)
-    await expect(card.locator('.interest-tags .chip')).toHaveCount(3)
-    const chipsFit = await card.locator('.interest-tags').evaluate(tags => {
-      const area = tags.getBoundingClientRect()
-      return [...tags.children].every(chip => { const rect = chip.getBoundingClientRect(); return rect.left >= area.left - 1 && rect.right <= area.right + 1 && rect.top >= area.top - 1 && rect.bottom <= area.bottom + 1 })
-    })
-    expect(chipsFit).toBe(true)
+    await expect(card.locator('.interest-tags')).toHaveCount(0)
+    await card.getByRole('button', { name: 'Посмотреть анкету', exact: true }).click()
+    await expect(page.getByRole('dialog').locator('.interest-tags .chip')).toHaveCount(3)
+    await page.getByRole('button', { name: 'Закрыть анкету', exact: true }).click()
     await expect(card.getByRole('button', { name: 'Принять', exact: true })).toBeVisible()
     await expect(card.getByRole('button', { name: 'Отклонить', exact: true })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
     if (width === 390) await card.screenshot({ path: testInfo.outputPath('pending-interests.png') })
     await launch(page, '/plans?tab=own')
-    await expect(page.locator('.record-action-groups > .plan-actions')).toHaveCount(2)
-    await expect(page.getByRole('button', { name: 'Отменить план', exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Посмотреть отклики (1)', exact: true })).toBeVisible()
+    await expect(page.getByLabel('Действия со своим планом')).toHaveCount(0)
     if (width === 390) await page.locator('.record-own').screenshot({ path: testInfo.outputPath('own-published.png') })
   }
 })

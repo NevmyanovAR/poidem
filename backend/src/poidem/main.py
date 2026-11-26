@@ -16,6 +16,8 @@ from poidem.api.middleware import (
 from poidem.api.routers import (
     account,
     activity,
+    admin_dashboard,
+    admin_management,
     connections,
     feedback,
     health,
@@ -63,6 +65,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(reference_data.router)
     app.include_router(account.router)
+    app.include_router(admin_dashboard.router)
+    app.include_router(admin_management.router)
+    app.include_router(admin_management.public_router)
     app.include_router(plans.router)
     app.include_router(connections.router)
     app.include_router(feedback.router)

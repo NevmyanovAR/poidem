@@ -10,7 +10,7 @@ export function recordActions(record: Record): RecordAction[] {
     const plan = record.value
     if (!plan.own || plan.archived) return []
     const actions: RecordAction[] = ['status', 'incoming']
-    if (plan.publicationStatus === 'draft' || plan.publicationStatus === 'published') actions.push('edit', ...(plan.publicationStatus === 'draft' ? ['publish' as const] : []), 'cancel')
+    actions.push(...(plan.allowedActions ?? []))
     return actions
   }
   const response = record.value

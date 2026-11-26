@@ -5,6 +5,7 @@ export default defineConfig(base, {
   testMatch: 'auth.spec.ts',
   testIgnore: [],
   workers: 1,
+  outputDir: 'test-results/auth',
   use: { ...base.use, baseURL: 'http://127.0.0.1:4173' },
   webServer: [
     {

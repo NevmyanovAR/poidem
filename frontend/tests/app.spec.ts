@@ -1,6 +1,9 @@
+import { serveEditorial } from './helpers/editorial'
 import { fillProfileBasics } from './helpers/profile'
 import { test, expect } from '@playwright/test'
 import { fileURLToPath } from 'node:url'
+
+test.beforeEach(async ({ page }) => { await serveEditorial(page) })
 
 test('registration validates adult age and interests without offering a fake account', async ({ page }) => {
   await page.goto('/')
@@ -212,12 +215,12 @@ test('compact home, editorial navigation, punctuation and mobile safe areas', as
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
     await page.screenshot({ path: test.info().outputPath(`home-safe-${viewport.width}x${viewport.height}.png`), fullPage: true })
     const nav = page.getByRole('navigation', { name: 'Мобильная навигация' })
-    const plus = nav.getByRole('link', { name: 'Создать свой план' })
+    const plus = page.getByRole('link', { name: 'Создать свой план' })
     const navBox = (await nav.boundingBox())!
     const plusBox = (await plus.boundingBox())!
     const otherBox = (await nav.getByRole('link', { name: 'Главная', exact: true }).boundingBox())!
     expect(plusBox.y).toBeLessThan(otherBox.y)
-    expect(plusBox.y + plusBox.height).toBeLessThanOrEqual(navBox.y + navBox.height - 34)
+    expect(plusBox.y + plusBox.height).toBeLessThanOrEqual(navBox.y - 16)
     expect(plusBox.x + plusBox.width).toBeLessThanOrEqual(viewport.width - 28)
     expect((await page.locator('.header-inner').boundingBox())!.y).toBeGreaterThanOrEqual(59)
     await plus.click()

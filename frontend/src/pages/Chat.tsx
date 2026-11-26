@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
+import { returnTarget } from '../lib/navigation'
 import { ArrowLeft, Send } from 'lucide-react'
 import { useAppData } from '../state/context'
 import { EmptyState } from '../components/ui'
@@ -22,6 +23,9 @@ export function Chat() {
 }
 
 function ChatConversation({ id }: { id: string }) {
+  const location = useLocation()
+  const fromMatch = location.state?.fromMatch === true
+  const backTo = returnTarget(location.state, '/chats')
   const { loadChat, loadMessages, sendMessage, readChat, matches } = useAppData()
   const currentMatch = matches.find(pair => pair.id === id)
   const partner = currentMatch ? matchPartner(currentMatch) : null
@@ -72,7 +76,7 @@ function ChatConversation({ id }: { id: string }) {
     return () => { live.current = false; window.clearInterval(interval); document.removeEventListener('visibilitychange', foreground) }
   }, [refresh])
   return <section className="chat-page">
-    <Link className="back-link" to={`/match/${id}`}><ArrowLeft size={16} />К вашему мэтчу</Link>
+    <div className="chat-navigation"><Link className="back-link" to={fromMatch ? `/match/${id}` : backTo} state={{ returnTo: backTo }}><ArrowLeft size={16} />{fromMatch ? 'К вашему мэтчу' : backTo === '/chats' ? 'К чатам' : 'К моим планам'}</Link>{!fromMatch && <Link className="text-link" to={`/match/${id}`} state={{ returnTo: backTo }}>О встрече</Link>}</div>
     <div className="screen-heading"><h1>Ваша <em>переписка</em></h1>{state && <SafetyMenu personName={partner?.name ?? 'участника этой переписки'} context={{ target_type: 'chat', context_type: 'match', context_id: id }} allowBlock onBlocked={() => void refresh()} />}</div>
     {state?.meetingCancelled && <p className="waiting-panel" role="status">Встреча отменена. Переписка сохранена</p>}
     {state?.archived && <p className="small-note">План в архиве. Ваша история сообщений сохранена</p>}

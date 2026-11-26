@@ -1,3 +1,4 @@
+import { serveEditorial } from './helpers/editorial'
 import { fillProfileBasics } from './helpers/profile'
 import { expect, test } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
@@ -22,6 +23,8 @@ async function checkColors(page: import('@playwright/test').Page) {
   expect(unexpected).toEqual([])
   expect(await page.locator('body').innerText()).not.toMatch(/прототип/i)
 }
+
+test.beforeEach(async ({ page }) => { await serveEditorial(page) })
 
 test('approved palette across routes, both profile steps and interaction states', async ({ page }) => {
   test.setTimeout(120000)

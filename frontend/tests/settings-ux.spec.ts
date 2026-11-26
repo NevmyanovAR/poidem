@@ -12,7 +12,7 @@ const people = () => [
 async function setup(page: Page, admin = false) {
   await scenario().install(page, responder)
   const state = { admin, items: people(), deleted: [] as string[], failUnblock: false, failLoad: false, deleteAccount: false, deleteRefused: true }
-  await page.route('**/api/v1/admin/session', route => route.fulfill(state.admin ? { json: { role: 'admin' } } : { status: 403, json: { error: { code: 'ADMIN_REQUIRED', message: 'Доступ ограничен' } } }))
+  await page.route('**/api/v1/admin/session', route => route.fulfill(state.admin ? { json: { role: 'admin', permissions: ['analytics', 'users', 'plans', 'moderation', 'system', 'editorial'] } } : { status: 403, json: { error: { code: 'ADMIN_REQUIRED', message: 'Доступ ограничен' } } }))
   await page.route('**/api/v1/admin/reports?**', route => route.fulfill({ json: { items: [], next_cursor: null } }))
   await page.route('**/api/v1/me/blocks', route => route.fulfill(state.failLoad ? { status: 503, json: { error: { code: 'SERVICE_UNAVAILABLE', message: 'Не удалось загрузить список' } } } : { json: { items: state.items } }))
   await page.route('**/api/v1/me/blocks/*', route => {
@@ -115,20 +115,20 @@ test('account removal stays confirmed, handles B13 and preserves its original AP
 test('moderation link follows server role and returns to settings', async ({ page }) => {
   const state = await setup(page, true)
   await launch(page, '/settings')
-  await page.getByRole('link', { name: /Панель модерации/ }).click()
-  await expect(page.getByRole('heading', { name: /Рассмотрение/ })).toBeVisible()
-  await page.locator('.admin-page').getByRole('link', { name: 'Настройки', exact: true }).click()
-  await expect(page.getByRole('link', { name: /Панель модерации/ })).toBeVisible()
+  await page.getByRole('link', { name: /Управление приложением/ }).click()
+  await expect(page.getByRole('navigation', { name: 'Разделы администратора' })).toBeVisible()
+  await page.getByRole('link', { name: 'В приложение', exact: true }).click()
+  await expect(page.getByRole('link', { name: /Управление приложением/ })).toBeVisible()
   state.admin = false
   await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
-  await expect(page.getByRole('link', { name: /Панель модерации/ })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: /Управление приложением/ })).toHaveCount(0)
 })
 
 test('ordinary settings do not expose admin or local reset', async ({ page }, testInfo) => {
   await setup(page)
   await launch(page, '/settings')
   await expect(page.getByRole('heading', { name: 'Настройки', exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: /Панель модерации/ })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: /Управление приложением/ })).toHaveCount(0)
   await expect(page.getByText('Очистить данные', { exact: true })).toHaveCount(0)
   await page.screenshot({ path: testInfo.outputPath('settings-user.png'), fullPage: true })
 })
@@ -167,7 +167,7 @@ test('settings, duplicate names and menus fit all required widths with review sc
     for (const [path, name] of [['/profile', 'profile-gear'], ['/settings', 'settings-admin'], ['/settings/blocked', 'blocked-same-names']]) {
       await launch(page, path)
       await expect(page.locator('main h1').filter({ visible: true })).toBeVisible()
-      if (path === '/settings') await expect(page.getByRole('link', { name: /Панель модерации/ })).toBeVisible()
+      if (path === '/settings') await expect(page.getByRole('link', { name: /Управление приложением/ })).toBeVisible()
       if (path === '/settings/blocked') {
         await expect(page.locator('.blocked-person')).toHaveCount(2)
         if (width === 320) {

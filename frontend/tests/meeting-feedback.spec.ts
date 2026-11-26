@@ -119,10 +119,10 @@ test('existing admin sees only scoped meeting result and no new sanctions', asyn
   await install(page)
   const reportId = '00000000-0000-4000-8000-000000000808'
   const report = { id: reportId, state: 'pending', target_type: 'match', reason_code: 'harassment', created_at: own.updated_at }
-  await page.route('**/api/v1/admin/session', route => route.fulfill({ json: { role: 'admin' } }))
+  await page.route('**/api/v1/admin/session', route => route.fulfill({ json: { role: 'admin', permissions: ['analytics', 'users', 'plans', 'moderation', 'system', 'editorial'] } }))
   await page.route('**/api/v1/admin/reports?**', route => route.fulfill({ json: { items: [report], next_cursor: null } }))
   await page.route(`**/api/v1/admin/reports/${reportId}`, route => route.fulfill({ json: { ...report, comment: null, evidence: { title: 'Тестовый план' }, can_hide_plan: false, decisions: [], meeting_review: { match_id: matchId, current: { result: 'mutual_yes', author_answered: true, responder_answered: true }, at_report: { result: 'conflicting', author_answered: true, responder_answered: true } } } }))
-  await launch(page, '/admin')
+  await launch(page, '/admin?section=moderation')
   await page.locator('.admin-report').click()
   const review = page.getByRole('region', { name: 'Результат опроса по жалобе' })
   await expect(review).toContainText('Оба подтвердили встречу')

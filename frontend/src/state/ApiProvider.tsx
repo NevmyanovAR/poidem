@@ -1,3 +1,4 @@
+import { FOREGROUND_REFRESH } from '../lib/autoRefresh'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ApiClient, ApiError } from '../api/client'
@@ -8,6 +9,7 @@ import { clearLegacyData } from '../lib/legacyStorage'
 import type { AuthorizationState, AppState, Profile, PublishedPlan, PlanResponse, PairMatch } from '../types'
 import { AppContext } from './context'
 import type { AppContextValue } from './context'
+import type { NavigationSummary } from '../types'
 
 const unavailableQuota = (): CreationQuota => ({ maximum: 3, used: 0, remaining: 0, day: '', timeZone: 'Europe/Moscow', ready: false })
 
@@ -27,6 +29,8 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   const [matches, setMatches] = useState<PairMatch[]>([])
   const [connectionsLoading, setConnectionsLoading] = useState(false)
   const [connectionsError, setConnectionsError] = useState('')
+  const [navigationSummary, setNavigationSummary] = useState<NavigationSummary | null>(null)
+  const [activityRevision, setActivityRevision] = useState(0)
   const active = useRef(false)
   const closing = useRef(false)
   const autoAuthDisabled = useRef(false)
@@ -35,6 +39,45 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const refreshFlight = useRef<{ epoch: number; task: Promise<void> } | null>(null)
   const connectionFlight = useRef<{ epoch: number; task: Promise<void> } | null>(null)
+  const navigationFlight = useRef<{ epoch: number; task: Promise<void> } | null>(null)
+  const refreshNavigation = useCallback((epoch = authEpoch.current): Promise<void> => {
+    if (!client.hasSession || closing.current) return Promise.resolve()
+    if (navigationFlight.current?.epoch === epoch) return navigationFlight.current.task
+    const task = (async () => {
+      try {
+        const summary = await client.navigation()
+        if (active.current && !closing.current && epoch === authEpoch.current) setNavigationSummary(summary)
+      } catch (error) {
+        // Не показываем устаревшие/выдуманные числа при недоступности сервера.
+        if (active.current && epoch === authEpoch.current && !closing.current) {
+          setNavigationSummary(null)
+          if (error instanceof ApiError && (error.status === 401 || error.code === 'AUTH_CONTEXT_CHANGED')) {
+            setData(emptyState()); setPublishedPlans([]); setIncomingResponses([]); setOutgoingResponses([]); setMatches([])
+            setDailyQuota(unavailableQuota()); setAuthorization({ status: 'unverified' })
+          }
+        }
+      }
+    })()
+    navigationFlight.current = { epoch, task }
+    const clear = () => { if (navigationFlight.current?.task === task) navigationFlight.current = null }
+    void task.then(clear, clear)
+    return task
+  }, [client])
+  const navigationChanged = useCallback(async () => {
+    const epoch = authEpoch.current
+    // Старый запрос мог начаться до mark_read/решения; после него нужен свежий снимок.
+    if (navigationFlight.current?.epoch === epoch) await navigationFlight.current.task
+    if (active.current && epoch === authEpoch.current && !closing.current) await refreshNavigation(epoch)
+  }, [refreshNavigation])
+  useEffect(() => {
+    if (authorization.status !== 'verified') return
+    const refresh = () => { if (document.visibilityState === 'visible') { void refreshNavigation(); window.dispatchEvent(new Event(FOREGROUND_REFRESH)) } }
+    refresh()
+    const interval = window.setInterval(refresh, 30000)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => { window.clearInterval(interval); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh) }
+  }, [authorization.status, refreshNavigation])
   const refreshConnections = useCallback((epoch = authEpoch.current): Promise<void> => {
     if (!client.hasSession || closing.current) return Promise.resolve()
     if (connectionFlight.current?.epoch === epoch) return connectionFlight.current.task
@@ -105,7 +148,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
     setData(emptyState())
     setIncomingResponses([]); setOutgoingResponses([]); setMatches([]); setConnectionsError('')
     setPublishedPlans([]); setDailyQuota(unavailableQuota()); setPlansError(''); setPlanError('')
-    setAuthorization({ status: 'checking' })
+    setNavigationSummary(null); setAuthorization({ status: 'checking' })
     try {
       const result = await client.authenticate(() => raw)
       if (!active.current || closing.current || epoch !== authEpoch.current) return
@@ -154,6 +197,27 @@ export function ApiProvider({ children }: { children: ReactNode }) {
     saveFeedback: (...args) => readConnection(() => client.saveFeedback(...args)),
     reliability: () => readConnection(() => client.reliability()),
   }), [client, readConnection])
+  const admin = useMemo<AppContextValue['admin']>(() => ({
+    adminTeam: (...args) => readConnection(() => client.adminTeam(...args)),
+    adminRole: (...args) => readConnection(() => client.adminRole(...args)),
+    adminAudit: filters => readConnection(() => client.adminAudit(filters)),
+    adminNotifications: filters => readConnection(() => client.adminNotifications(filters)),
+    adminIdeas: filters => readConnection(() => client.adminIdeas(filters)),
+    adminCreateIdea: (...args) => readConnection(() => client.adminCreateIdea(...args)),
+    adminEditIdea: (...args) => readConnection(() => client.adminEditIdea(...args)),
+    adminIdeaCommand: (...args) => readConnection(() => client.adminIdeaCommand(...args)),
+    adminIdeaPhoto: (...args) => readConnection(() => client.adminIdeaPhoto(...args)),
+    mediaUrl: path => client.mediaUrl(path),
+    adminAnalytics: period => readConnection(() => client.adminAnalytics(period)),
+    adminExport: period => readConnection(() => client.adminExport(period)),
+    adminUsers: (...args) => readConnection(() => client.adminUsers(...args)),
+    adminUser: id => readConnection(() => client.adminUser(id)),
+    adminPlans: (...args) => readConnection(() => client.adminPlans(...args)),
+    adminPlan: id => readConnection(() => client.adminPlan(id)),
+    adminSystem: () => readConnection(() => client.adminSystem()),
+  }), [client, readConnection])
+  const editorial = useMemo<AppContextValue['editorial']>(() => ({ ideas: offset => client.ideas(offset), idea: id => client.idea(id), mediaUrl: path => client.mediaUrl(path) }), [client])
+  const trackPlanView = useCallback((id: string) => readConnection(() => client.trackPlanView(id)), [client, readConnection])
   const safety = useMemo<AppContextValue['safety']>(() => ({
     report: (...args) => readConnection(() => client.report(...args)),
     block: (...args) => readConnection(() => client.block(...args)),
@@ -171,12 +235,13 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   const loadMatch = useCallback((id: string) => readConnection(() => client.match(id)), [client, readConnection])
   const loadContact = useCallback((id: string) => readConnection(() => client.contact(id)), [client, readConnection])
   const loadPlanResponses = useCallback((id: string, cursor?: string) => readConnection(() => client.planResponses(id, cursor)), [client, readConnection])
-  const loadActivity = useCallback((scope: 'active' | 'archive', includeHidden: boolean, cursor?: string, planId?: string) => readConnection(() => client.activity(scope, includeHidden, cursor, planId)), [client, readConnection])
+  const loadActivity = useCallback((scope: 'active' | 'archive', includeHidden: boolean, cursor?: string, planId?: string, view?: 'all' | 'own') => readConnection(() => client.activity(scope, includeHidden, cursor, planId, view)), [client, readConnection])
+  const loadDialogs = useCallback((cursor?: string) => readConnection(() => client.dialogs(cursor)), [client, readConnection])
   const hideArchive = useCallback((planId: string, hidden: boolean) => readConnection(() => client.archiveVisibility(planId, hidden)), [client, readConnection])
   const loadChat = useCallback((id: string) => readConnection(() => client.chat(id)), [client, readConnection])
   const loadMessages = useCallback((id: string, direction?: { before?: number; after?: number }) => readConnection(() => client.messages(id, direction)), [client, readConnection])
-  const sendMessage = useCallback((id: string, text: string, key: string) => readConnection(() => client.sendMessage(id, text, key)), [client, readConnection])
-  const readChat = useCallback((id: string, sequence: number) => readConnection(() => client.readChat(id, sequence)), [client, readConnection])
+  const sendMessage = useCallback(async (id: string, text: string, key: string) => { const result = await readConnection(() => client.sendMessage(id, text, key)); void navigationChanged(); return result }, [client, readConnection, navigationChanged])
+  const readChat = useCallback(async (id: string, sequence: number) => { const result = await readConnection(() => client.readChat(id, sequence)); void navigationChanged(); return result }, [client, readConnection, navigationChanged])
   async function writeConnection(operation: () => Promise<PlanResponse>): Promise<PlanResponse | null> {
     if (authorization.status !== 'verified' || busy || closing.current) return null
     const epoch = authEpoch.current
@@ -187,6 +252,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
       if (refreshFlight.current?.epoch === epoch) await refreshFlight.current.task
       if (connectionFlight.current?.epoch === epoch) await connectionFlight.current.task
       await Promise.all([refreshPlans(epoch), refreshConnections(epoch)])
+      if (active.current && epoch === authEpoch.current) { setActivityRevision(value => value + 1); void navigationChanged() }
       return active.current && !closing.current && epoch === authEpoch.current ? result : null
     } catch (error) {
       if (active.current && !closing.current && epoch === authEpoch.current) {
@@ -213,6 +279,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
       if (refreshFlight.current?.epoch === epoch) await refreshFlight.current.task
       await refreshPlans(epoch)
       if (epoch !== authEpoch.current || closing.current || !active.current) return false
+      setActivityRevision(value => value + 1); void navigationChanged()
       notify(message); return true
     } catch (error) {
       if (epoch === authEpoch.current && active.current && !closing.current) {
@@ -226,7 +293,9 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   }
 
   return <AppContext.Provider value={{
-    safety, meeting,
+    editorial,
+    safety, meeting, admin, trackPlanView,
+    navigationSummary: authorization.status === 'verified' ? navigationSummary : null, refreshNavigation, activityRevision, loadDialogs,
     data, plans: data.ownPlans, publishedPlans,
     authorization, busy, dailyQuota, plansLoading, plansError, planError,
     incomingResponses, outgoingResponses, matches, connectionsLoading, connectionsError, refreshConnections,
