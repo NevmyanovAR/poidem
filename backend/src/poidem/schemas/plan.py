@@ -12,6 +12,8 @@ from pydantic import (
     model_validator,
 )
 
+from poidem.schemas.place import CheckedPlace
+
 
 class PlanFields(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
@@ -20,7 +22,25 @@ class PlanFields(BaseModel):
     description: str = Field(default="", max_length=300)
     starts_at: AwareDatetime
     time_zone: str = Field(min_length=1, max_length=80)
-    place: str = Field(min_length=1, max_length=160)
+    place: str = Field(default="", max_length=500)
+    place_name: str | None = Field(None, min_length=1, max_length=160)
+    place_address: str | None = Field(None, min_length=1, max_length=300)
+
+    @model_validator(mode="after")
+    def structured_place(self):
+        if (self.place_name is None) != (self.place_address is None):
+            raise ValueError("Укажи название места и адрес")
+        if self.place_name is not None:
+            self.place_name = " ".join(self.place_name.split())
+            self.place_address = " ".join(self.place_address.split())
+            self.place = f"{self.place_name} · {self.place_address}"
+        if "\x00" in self.place or any(0xD800 <= ord(char) <= 0xDFFF for char in self.place):
+            raise ValueError("Укажи место без неподдерживаемых символов")
+        if not self.place.strip():
+            raise ValueError("Укажи место встречи")
+        return self
+
+    selected_place_id: uuid.UUID | None = None
 
     @field_validator("time_zone")
     @classmethod
@@ -47,11 +67,14 @@ class PlanPatch(BaseModel):
     description: str | None = Field(default=None, max_length=300)
     starts_at: AwareDatetime | None = None
     time_zone: str | None = Field(default=None, min_length=1, max_length=80)
-    place: str | None = Field(default=None, min_length=1, max_length=160)
+    place: str | None = Field(default=None, min_length=1, max_length=500)
+    place_name: str | None = Field(None, min_length=1, max_length=160)
+    place_address: str | None = Field(None, min_length=1, max_length=300)
+    selected_place_id: uuid.UUID | None = None
 
     @model_validator(mode="after")
     def no_null_fields(self):
-        if any(getattr(self, key) is None for key in self.model_fields_set):
+        if any(getattr(self, key) is None for key in self.model_fields_set - {"selected_place_id"}):
             raise ValueError("Поля плана не могут быть null")
         return self
 
@@ -75,6 +98,12 @@ class PlanDTO(BaseModel):
     starts_at: datetime
     time_zone: str
     place: str
+    place_name: str | None = None
+    place_address: str | None = None
+    place_check_status: str = "pending"
+    venue: CheckedPlace | None = None
+    selected_place_id: uuid.UUID | None = None
+    place_status: str = "legacy"
     publication_status: str
     moderation_status: str
     created_at: datetime

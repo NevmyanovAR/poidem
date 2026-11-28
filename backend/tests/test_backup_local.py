@@ -36,6 +36,10 @@ def test_backup_archive_includes_database_and_shared_media_without_env(tmp_path,
     (tmp_path / ".env").write_text("DO_NOT_COPY=synthetic", encoding="utf-8")
     monkeypatch.setattr(backup, "ROOT", tmp_path)
     monkeypatch.setattr(backup, "load_settings", lambda: SimpleNamespace(media_root=media))
+    monkeypatch.setattr(backup, "backup_media_keys", lambda _: {"profile.jpg", "editorial.jpg"})
+    (media / "verification-selfie.jpg").write_bytes(b"synthetic temporary selfie")
+    (media / "verification-primary.jpg").write_bytes(b"synthetic temporary comparison")
+    (media / "orphan.jpg").write_bytes(b"synthetic orphan")
     calls = []
 
     def docker(args):
@@ -57,6 +61,7 @@ def test_backup_archive_includes_database_and_shared_media_without_env(tmp_path,
         }
         assert output.read("media/editorial.jpg") == b"synthetic editorial"
         assert json.loads(output.read("manifest.json"))["writers_stopped_confirmed"] is True
+        assert json.loads(output.read("manifest.json"))["verification_materials_included"] is False
 
 
 def test_backup_failure_does_not_echo_raw_process_output(monkeypatch):

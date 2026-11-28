@@ -52,8 +52,17 @@ SUPPRESSION_CODES = tuple(
         "stale_lease",
     }
 )
-READ_ACTIONS = ("admin_analytics_read", "admin_user_read", "admin_plan_read")
+READ_ACTIONS = (
+    "admin_analytics_read",
+    "admin_user_read",
+    "admin_plan_read",
+    "place_list",
+    "place_check_list",
+    "place_read",
+)
 KIND_LABELS = {
+    "photo_verification_approved": "Фото подтверждено",
+    "photo_verification_rejected": "Проверка фото отклонена",
     "response_received": "Новый отклик",
     "response_accepted": "Принятие отклика",
     "response_rejected": "Отказ",

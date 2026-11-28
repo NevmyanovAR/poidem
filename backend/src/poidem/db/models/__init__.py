@@ -4,11 +4,18 @@ from poidem.db.models.accounts import AuthSession, User
 from poidem.db.models.bot_health import BotHeartbeat
 from poidem.db.models.chat import ArchiveHidden, ChatMessage, ChatReadState, ChatThread
 from poidem.db.models.editorial import EditorialIdea
-from poidem.db.models.feedback import FeedbackAnswer, ReliabilityEvent, Survey, SurveyRecipient
+from poidem.db.models.feedback import (
+    FeedbackAnswer,
+    PositiveImpression,
+    ReliabilityEvent,
+    Survey,
+    SurveyRecipient,
+)
 from poidem.db.models.maintenance import MediaDeletion, RateLimitWindow
 from poidem.db.models.messaging import BotBinding, NotificationJob, TelegramUpdate
 from poidem.db.models.moderation import ModerationCase, ModerationDecision, Report, UserRestriction
 from poidem.db.models.operations import AdminAuditLog, AnalyticsEvent, IdempotencyRecord
+from poidem.db.models.places import PlaceSelectionRecord, PublicPlace
 from poidem.db.models.plans import Category, DailyPlanUsage, Match, Plan, PlanResponse
 from poidem.db.models.profiles import (
     GenderOption,
@@ -18,8 +25,13 @@ from poidem.db.models.profiles import (
     Profile,
     ProfileInterest,
 )
+from poidem.db.models.verification import PhotoVerification
 
 __all__ = [
+    "PositiveImpression",
+    "PublicPlace",
+    "PhotoVerification",
+    "PlaceSelectionRecord",
     "BotHeartbeat",
     "EditorialIdea",
     "ArchiveHidden",

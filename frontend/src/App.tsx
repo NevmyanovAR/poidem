@@ -1,3 +1,4 @@
+import { useViewportLayout } from './lib/viewportLayout'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { NavLink, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { ArrowUpRight, Compass, Heart, Home as HomeIcon, Plus, MessageCircle, UserRound, Settings as SettingsIcon } from 'lucide-react'
@@ -15,6 +16,7 @@ import { Inspiration } from './pages/Inspiration'
 import { Match } from './pages/Match'
 import { Chat } from './pages/Chat'
 import { Chats } from './pages/Chats'
+import { PhotoVerification } from './pages/PhotoVerification'
 import { Admin } from './pages/Admin'
 import { EmptyState } from './components/ui'
 import { useScreenScroll } from './lib/scrollMemory'
@@ -50,10 +52,12 @@ export default function App() {
     return count ? <span className="count-badge nav-count" aria-label={`${to === '/plans' ? 'Новых откликов' : 'Непрочитанных сообщений'}: ${count}`}>{count > 99 ? '99+' : count}</span> : null
   }
   useTelegram()
+  useViewportLayout()
   const isWelcome = pathname === '/'
   const isAdmin = pathname === '/admin'
   const isPlanDetails = pathname.startsWith('/people/')
   const isMain = links.some(link => link.to === pathname)
+  const isPolished = ['/catalog', '/plans', '/chats', '/profile', '/create', '/settings/photo-verification'].includes(pathname) || isPlanDetails || pathname.startsWith('/match/')
 
   return <>
     <a className={`skip-link${isAdmin ? ' admin-skip-link' : ''}`} href="#main">К содержимому</a>
@@ -61,11 +65,12 @@ export default function App() {
       <nav aria-label="Основная навигация" className="desktop-nav">{links.map(link => <NavLink key={link.to} to={link.to === '/plans' ? lastPlans : link.to}>{link.text}{badge(link.to)}</NavLink>)}</nav>
       <div className={`header-account ${pathname === '/profile' ? 'has-settings' : ''}`}><Link className="profile-link" to="/profile" aria-label="Моя анкета">{data.profile ? <img src={data.profile.photo} alt="" /> : <UserRound size={19} />}<span>{data.profile?.name ?? 'Моя анкета'}</span></Link>{pathname === '/profile' && <Link to="/settings" className="settings-link" aria-label="Настройки"><SettingsIcon size={21} /></Link>}</div>
     </div></header>}
-    <main id="main" tabIndex={-1} className={isWelcome ? 'welcome-main' : isAdmin ? 'admin-main' : `main-container${isPlanDetails ? ' plan-detail-main' : ''}${isMain ? ' main-with-create' : ''}`}><Routes>
+    <main id="main" tabIndex={-1} className={isWelcome ? 'welcome-main' : isAdmin ? 'admin-main' : `main-container${isPlanDetails ? ' plan-detail-main' : ''}${isMain ? ' main-with-create' : ''}${isPolished ? ' polished-ui' : ''}`}><Routes>
       <Route path="/" element={<Welcome />} />
       <Route element={<ProfileSettingsFrame />}>
         <Route path="/profile" element={null} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings/photo-verification" element={<PhotoVerification />} />
         <Route path="/settings/blocked" element={<BlockedPage />} />
         <Route path="/admin" element={<Admin />} />
       </Route>
@@ -81,7 +86,7 @@ export default function App() {
       <Route path="/start" element={<Navigate to="/" replace />} />
       <Route path="*" element={<EmptyState title="Кажется, мы свернули не туда" action="На главную" to="/home">Такой страницы нет. Но хороший план обязательно найдётся</EmptyState>} />
     </Routes></main>
-    {!isWelcome && !isAdmin && <>{!isPlanDetails && <footer className="site-footer"><Brand /><span>Сначала — что делать. Потом — с кем</span></footer>}
+    {!isWelcome && !isAdmin && <>{!isPlanDetails && location.pathname !== '/settings/photo-verification' && <footer className="site-footer"><Brand /><span>Сначала — что делать. Потом — с кем</span></footer>}
       <nav className="mobile-nav" ref={mobileNav} aria-label="Мобильная навигация">{links.map(({ to, text, icon: Icon }) => <NavLink key={to} to={to === '/plans' ? lastPlans : to}><span className="nav-icon"><Icon size={21} />{badge(to)}</span><span>{text}</span></NavLink>)}</nav>
       {isMain && <Link className="create-fab" to="/create" aria-label="Создать свой план"><Plus size={25} /></Link>}</>}
     <div className={`toast ${toast ? 'is-visible' : ''}`} role="status" aria-live="polite">{toast}</div>

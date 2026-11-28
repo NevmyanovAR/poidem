@@ -35,6 +35,7 @@ class PhotoDTO(BaseModel):
 
 
 class OwnProfileDTO(BaseModel):
+    photo_verified: bool = False
     user_id: uuid.UUID
     name: str
     age: int

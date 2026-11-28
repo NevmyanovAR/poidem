@@ -26,7 +26,7 @@ async function telegram(page: Page, id: number, secondsAgo = 0) {
 
 async function register(page: Page, name: string) {
   await page.goto('/profile')
-  await expect(page.getByText('Данные Telegram подтверждены сервером', { exact: true })).toBeVisible()
+  await expect(page.getByText('Вход через Telegram', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Заполнить примером' })).toHaveCount(0)
   await page.getByRole('textbox', { name: 'Твоё имя' }).fill(name)
   await page.getByRole('spinbutton', { name: 'Возраст' }).fill('24')
@@ -96,7 +96,7 @@ test('current signed Telegram context wins over a previous account cookie', asyn
   const current = initData(800005)
   await page.evaluate(raw => { window.Telegram!.WebApp!.initData = raw; window.dispatchEvent(new Event('poidem:telegram-ready')) }, current)
   await page.getByRole('link', { name: 'Моя анкета' }).click()
-  await expect(page.getByText('Данные Telegram подтверждены сервером', { exact: true })).toBeVisible()
+  await expect(page.getByText('Вход через Telegram', { exact: true })).toBeVisible()
   await expect(page.getByRole('textbox', { name: 'Твоё имя' })).toHaveValue('')
 })
 
@@ -139,7 +139,7 @@ test('a delayed response from account A cannot show its profile during account B
   await expect(page.getByRole('textbox', { name: 'Твоё имя' })).toHaveValue('')
   await expect(page.getByText('Проверяем данные авторизации', { exact: true })).toBeVisible()
   releaseB()
-  await expect(page.getByText('Данные Telegram подтверждены сервером', { exact: true })).toBeVisible()
+  await expect(page.getByText('Вход через Telegram', { exact: true })).toBeVisible()
   await expect(page.getByRole('textbox', { name: 'Твоё имя' })).toHaveValue('')
 })
 
@@ -162,7 +162,7 @@ test('a late save from A cannot overwrite the UI or authorization of B', async (
   await page.getByRole('button', { name: 'Сохранить анкету', exact: true }).click()
   await saved
   await page.evaluate(raw => { window.Telegram!.WebApp!.initData = raw; window.dispatchEvent(new Event('poidem:telegram-ready')) }, initData(800010))
-  await expect(page.getByText('Данные Telegram подтверждены сервером', { exact: true })).toBeVisible()
+  await expect(page.getByText('Вход через Telegram', { exact: true })).toBeVisible()
   release()
   await expect(page.getByRole('textbox', { name: 'Твоё имя' })).toHaveValue('')
   await expect(page).toHaveURL('/profile')

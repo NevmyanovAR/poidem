@@ -93,6 +93,55 @@ async def payload(session, entry, binding, settings, diagnostic=None):
             diagnostic["reason"] = code
         return None
 
+    if entry.kind.startswith("photo_verification_"):
+        from poidem.bot_ui import short_text, text_message
+        from poidem.db.models import PhotoVerification, Profile
+        from poidem.services.photo_verification import REASONS, verified
+
+        check = await session.get(PhotoVerification, uuid.UUID(entry.entity_ref["verification_id"]))
+        if not check or check.user_id != entry.recipient_id or check.consent_revoked_at:
+            return skip("content_unavailable")
+        if entry.kind != "photo_verification_" + check.state:
+            return skip("content_unavailable")
+        profile = await session.get(Profile, check.user_id)
+        if (
+            not profile
+            or profile.photo_id != check.photo_id
+            or profile.photo_revision != check.photo_revision
+        ):
+            return skip("content_unavailable")
+        if check.state == "approved":
+            if not await verified(session, profile):
+                return skip("content_unavailable")
+            message = text_message(
+                "Фото подтверждено", "Модератор сверил фото анкеты с проверочным селфи"
+            )
+        else:
+            newer = await session.scalar(
+                select(PhotoVerification.id)
+                .where(
+                    PhotoVerification.user_id == check.user_id,
+                    PhotoVerification.created_at > check.created_at,
+                )
+                .limit(1)
+            )
+            if newer:
+                return skip("content_unavailable")
+            reason = (
+                check.reason_comment
+                if check.reason_code == "other"
+                else REASONS.get(check.reason_code)
+            )
+            message = text_message(
+                "Проверка фото не пройдена",
+                short_text(reason) or "Нужно переснять проверочное селфи",
+                "Можно попробовать ещё раз",
+            )
+        return message, open_app(
+            settings,
+            "settings/photo-verification",
+            "Посмотреть результат" if check.state == "approved" else "Переснять фото",
+        )
     if entry.kind == "post_meeting_survey":
         result = await surveys.delivery(session, entry, settings)
         return result if result else skip("survey_unavailable")

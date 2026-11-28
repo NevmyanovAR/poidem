@@ -2,6 +2,13 @@
 .env
 .env.*
 !.env.example
+!**/*.env.example
+deploy/production.env
+deploy/production.env.*
+!deploy/production.env.example
+deploy/letsencrypt/
+deploy/acme/
+deploy/releases/
 *.pem
 *.key
 

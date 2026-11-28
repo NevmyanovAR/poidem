@@ -1,22 +1,27 @@
 import { expect, test, type Page } from '@playwright/test'
+import type { CheckedPlace } from '../src/types'
 
 // Изолированный контракт UI. Все API-ответы здесь синтетические, в PostgreSQL
 // не пишутся; серверные права/квоты проверяются pytest на отдельной БД.
 const actor = '00000000-0000-4000-8000-000000000101'
 const other = '00000000-0000-4000-8000-000000000202'
+const venue: CheckedPlace = { provider: 'local', provider_place_id: '00000000-0000-4000-8000-000000003201', name: 'Общественное тестовое кафе', address: 'Тестовый город, улица Примерная, дом 1', latitude: null, longitude: null, status: 'approved', category: 'cafe', category_label: 'Кафе и кофейня', checked_at: new Date().toISOString(), policy_version: 'local-catalog-v1' }
+const manyPlaces = Array.from({ length: 10 }, (_, index) => ({ ...venue, name: `Общественное кафе ${index + 1}`, provider_place_id: `00000000-0000-4000-8000-${String(index + 3201).padStart(12, '0')}` }))
+const selectionId = '00000000-0000-4000-8000-000000003001'
 const tomorrow = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
 const initialPlan = (own = true) => ({
   id: own ? '00000000-0000-4000-8000-000000001001' : '00000000-0000-4000-8000-000000002001',
   author: { id: own ? actor : other, name: own ? 'Синтетический автор' : 'Синтетический участник' },
   title: own ? 'Собственный план' : 'План другого участника', category_code: 'art',
   description: 'Данные только браузерного теста', starts_at: `${tomorrow}T15:00:00Z`,
+  venue: null as CheckedPlace | null, selected_place_id: null as string | null, place_status: 'legacy',
   time_zone: 'Europe/Moscow', place: 'Музей', publication_status: 'published', moderation_status: 'not_submitted',
   created_at: new Date().toISOString(), version: 1, image: '/images/gallery.jpeg', own, allowed_actions: own ? ['edit', 'cancel'] : [],
 })
 type TestPlan = ReturnType<typeof initialPlan>
 
-async function api(page: Page, options: { own?: TestPlan[]; catalog?: TestPlan[]; used?: number; unavailable?: boolean; rejectContent?: boolean } = {}) {
-  const state = { own: options.own ?? [], catalog: options.catalog ?? [], used: options.used ?? 0, creations: 0, keys: [] as string[], unavailable: options.unavailable ?? false }
+async function api(page: Page, options: { own?: TestPlan[]; catalog?: TestPlan[]; used?: number; unavailable?: boolean; rejectContent?: boolean; placesUnavailable?: boolean } = {}) {
+  const state = { own: options.own ?? [], catalog: options.catalog ?? [], used: options.used ?? 0, creations: 0, searches: [] as string[], resolutions: [] as unknown[], keys: [] as string[], unavailable: options.unavailable ?? false }
   await page.route('https://telegram.org/js/telegram-web-app.js', route => route.abort())
   await page.route('**/api/v1/**', async route => {
     const request = route.request(), path = new URL(request.url()).pathname, method = request.method()
@@ -29,6 +34,12 @@ async function api(page: Page, options: { own?: TestPlan[]; catalog?: TestPlan[]
     if (path === '/api/v1/auth/csrf') return json({ user_id: actor, csrf_token: 'synthetic-only' })
     expect(request.headers()['x-account-context']).toBe(actor)
     if (state.unavailable) return error('Планы временно недоступны', 503)
+    if (path.startsWith('/api/v1/places/')) {
+      if (options.placesUnavailable) return error('Поиск мест пока не настроен. Можно сохранить черновик', 503)
+      if (path.endsWith('/search')) { const q = new URL(request.url()).searchParams.get('q')!; state.searches.push(q); return json({ items: q.includes('Неизвест') ? [] : q.startsWith('Много') ? manyPlaces : [venue], attribution: '' }) }
+      state.resolutions.push(request.postDataJSON())
+      return json({ selection_id: selectionId, place: manyPlaces.find(item => item.provider_place_id === request.postDataJSON().provider_place_id && item.provider_place_id !== venue.provider_place_id) ?? venue })
+    }
     if (path === '/api/v1/me/quotas') return json({ maximum: 3, used: state.used, remaining: 3 - state.used, day: tomorrow, time_zone: 'Europe/Moscow' })
     if (path === '/api/v1/me/activity') {
       const archived = new URL(request.url()).searchParams.get('scope') === 'archive'
@@ -51,7 +62,7 @@ async function api(page: Page, options: { own?: TestPlan[]; catalog?: TestPlan[]
       const fields = request.postDataJSON()
       state.keys.push(request.headers()['idempotency-key'])
       state.creations++; state.used++
-      const plan = { ...initialPlan(), ...fields, id: crypto.randomUUID(), publication_status: 'draft', allowed_actions: ['edit', 'cancel', 'publish'] }
+      const plan = { ...initialPlan(), ...fields, id: crypto.randomUUID(), publication_status: 'draft', venue: fields.selected_place_id ? venue : null, selected_place_id: fields.selected_place_id ?? null, place_status: fields.selected_place_id ? 'catalogue' : 'unselected', allowed_actions: ['edit', 'cancel', 'publish'] }
       state.own.unshift(plan)
       return json({ plan }, 201)
     }
@@ -79,7 +90,8 @@ async function launch(page: Page, path: string) {
 
 async function fillPlan(page: Page) {
   await page.getByRole('textbox', { name: 'Название плана' }).fill('Серверный план проверки')
-  await page.getByRole('textbox', { name: 'Где встречаемся?' }).fill('Вход в музей')
+  await page.getByRole('textbox', { name: 'Название места', exact: true }).fill('Вход в музей')
+  await page.getByRole('textbox', { name: 'Адрес', exact: true }).fill('Тестовый город, улица 1')
   await page.locator('input[name=date]').fill(tomorrow)
   await page.locator('input[name=time]').fill('18:30')
   await page.getByRole('button', { name: 'Посмотреть план', exact: true }).click()
@@ -186,5 +198,35 @@ test('server plan cards and actions fit mobile and desktop widths', async ({ pag
       expect(overflow, `${path} at ${width}`).toBeLessThanOrEqual(1)
     }
     if (width === 320 || width === 1366) await page.screenshot({ path: test.info().outputPath(`plans-catalog-${width}.png`), fullPage: true })
+  }
+})
+
+
+
+test('free fields save and publish even if legacy catalogue is unavailable', async ({ page }) => {
+  const state = await api(page, { placesUnavailable: true })
+  await launch(page, '/create')
+  await fillPlan(page)
+  await page.getByRole('button', { name: 'Сохранить план', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Опубликовать', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Опубликовать', exact: true }).click()
+  await expect(page.getByText('Опубликован', { exact: true })).toBeVisible()
+  expect(state.searches).toEqual([])
+  expect(state.resolutions).toEqual([])
+})
+
+test('free place fields fit mobile and desktop without covering navigation', async ({ page, isMobile }) => {
+  test.setTimeout(120000)
+  await api(page)
+  for (const width of isMobile ? [320,360,390,430] : [320,360,390,430,1366,1920]) {
+    await page.setViewportSize({ width, height: 900 })
+    await launch(page, '/create')
+    await page.getByRole('textbox', { name: 'Название места', exact: true }).fill('Кафе с достаточно длинным названием')
+    await page.getByRole('textbox', { name: 'Адрес', exact: true }).fill('Тестовый город, Примерная улица, 1. Корпус А')
+    await page.locator('.meeting-place-fields').scrollIntoViewIfNeeded()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1)
+    await page.screenshot({ path: test.info().outputPath(`free-place-${width}.png`) })
+    await page.getByRole('link', { name: 'Мои планы', exact: true }).click()
+    await expect(page).toHaveURL('/plans')
   }
 })

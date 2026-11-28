@@ -407,6 +407,9 @@ async def match_dto(session, actor, entry):
         starts_at=entry.meeting_starts_at,
         time_zone=entry.meeting_time_zone,
         place=entry.meeting_place,
+        place_check_status=plan.place_check_status
+        if plan.place_checked_revision == plan.place_revision and plan.place == entry.meeting_place
+        else "pending",
         created_at=entry.created_at,
         participants=participants,
         archived=archive.is_archived(plan),

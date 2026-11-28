@@ -25,6 +25,7 @@ from poidem.schemas.plan import PlanAuthorDTO, PlanDTO, PlanFields, PlanPage, Qu
 from poidem.security.session import lock_actor
 from poidem.services.plan_content import validate_content
 
+PLACE_POLICY = "free-place-v1"
 QUOTA_ZONE = ZoneInfo("Europe/Moscow")
 POLICY_VERSION = "plans-v1"
 VISIBLE_MODERATION = ("not_submitted", "approved")
@@ -118,6 +119,16 @@ def dto(row, actor, allowed_actions=()) -> PlanDTO:
     from poidem.services.archive import is_archived
 
     plan, name, image = row
+    # Historical venue is a frozen snapshot, never a live catalogue alias.
+    venue = (
+        {
+            k: v
+            for k, v in plan.venue.items()
+            if k != "selection_id" and (k != "moderation_reason" or plan.author_id == actor.user_id)
+        }
+        if plan.venue
+        else None
+    )
     return PlanDTO(
         id=plan.id,
         author=PlanAuthorDTO(id=plan.author_id, name=name),
@@ -127,6 +138,18 @@ def dto(row, actor, allowed_actions=()) -> PlanDTO:
         starts_at=plan.starts_at,
         time_zone=plan.time_zone,
         place=plan.place,
+        place_name=plan.place_name,
+        place_address=plan.place_address,
+        place_check_status=plan.place_check_status
+        if plan.place_checked_revision == plan.place_revision
+        else "pending",
+        venue=venue,
+        selected_place_id=plan.venue.get("selection_id")
+        if plan.venue and plan.author_id == actor.user_id
+        else None,
+        place_status=("catalogue" if plan.venue.get("provider") == "local" else "legacy")
+        if plan.venue
+        else ("legacy" if plan.place_policy_version is None else "unselected"),
         publication_status=plan.publication_status,
         moderation_status=plan.moderation_status,
         created_at=plan.created_at,
@@ -258,7 +281,9 @@ async def list_plans(
     )
 
 
-async def create(session, actor, fields: PlanFields, key: uuid.UUID) -> tuple[PlanDTO, bool]:
+async def create(
+    session, actor, fields: PlanFields, key: uuid.UUID, places
+) -> tuple[PlanDTO, bool]:
     await lock_actor(session, actor)
     await require_active(session, actor, profile=True)
     fingerprint = hashlib.sha256(
@@ -272,6 +297,13 @@ async def create(session, actor, fields: PlanFields, key: uuid.UUID) -> tuple[Pl
             )
         return await get_plan(session, actor, uuid.UUID(record.result_resource_ref)), False
     await validate_fields(session, fields)
+    venue = (
+        await places.selection(session, actor, fields.selected_place_id, fields.place)
+        if fields.selected_place_id and fields.place_name is None
+        else None
+    )
+    if venue is not None:
+        fields.place = f"{venue['name']} · {venue['address']}"
     at = now()
     day, reset = quota_calendar(at)
     statement = insert(DailyPlanUsage).values(
@@ -293,7 +325,8 @@ async def create(session, actor, fields: PlanFields, key: uuid.UUID) -> tuple[Pl
             "Сегодня можно создать не больше 3 планов — новый лимит после полуночи по Москве",
             retry_after=max(1, math.ceil((reset - at).total_seconds())),
         )
-    values = fields.model_dump()
+    values = fields.model_dump(exclude={"selected_place_id"})
+    values["venue"] = venue
     values["starts_at"] = fields.starts_at.astimezone(UTC)
     plan = Plan(author_id=actor.user_id, **values, quota_charged_at=at, quota_charged_day=day)
     session.add(plan)
@@ -341,18 +374,41 @@ async def editable(session, actor, plan_id, expected):
     return plan
 
 
-async def update(session, actor, plan_id, payload) -> PlanDTO:
+async def update(session, actor, plan_id, payload, places) -> PlanDTO:
     plan = await editable(session, actor, plan_id, payload.expected_version)
     if plan.publication_status not in ("draft", "published"):
         raise AppError(409, "PLAN_NOT_EDITABLE", "Этот план уже закрыт или отменён")
-    values = {key: getattr(plan, key) for key in PlanFields.model_fields}
+    values = {
+        key: getattr(plan, key) for key in PlanFields.model_fields if key != "selected_place_id"
+    }
     values.update(payload.model_dump(exclude_unset=True, exclude={"expected_version"}))
+    if (
+        "place" in payload.model_fields_set
+        and not ({"place_name", "place_address"} & payload.model_fields_set)
+        and payload.place != plan.place
+    ):
+        values["place_name"] = values["place_address"] = None
     try:
         fields = PlanFields.model_validate(values)
     except ValidationError as error:
         raise AppError(422, "VALIDATION_ERROR", "Проверь поля плана") from error
     await validate_fields(session, fields)
-    for key, value in fields.model_dump().items():
+    changed_place = (fields.place_name, fields.place_address, fields.place) != (
+        plan.place_name,
+        plan.place_address,
+        plan.place,
+    )
+    if changed_place:
+        plan.venue = None
+        plan.place_policy_version = PLACE_POLICY
+        plan.place_revision += 1
+        plan.place_review_version += 1
+        plan.place_check_status = "pending"
+        plan.place_checked_revision = None
+        plan.place_checked_by = None
+        plan.place_checked_at = None
+        plan.place_check_reason = None
+    for key, value in fields.model_dump(exclude={"selected_place_id"}).items():
         setattr(plan, key, value.astimezone(UTC) if key == "starts_at" else value)
     plan.moderation_status = "not_submitted"
     plan.version += 1
@@ -361,7 +417,7 @@ async def update(session, actor, plan_id, payload) -> PlanDTO:
     return await get_plan(session, actor, plan.id)
 
 
-async def command(session, actor, plan_id, payload, action: str) -> PlanDTO:
+async def command(session, actor, plan_id, payload, action: str, places) -> PlanDTO:
     plan = await editable(session, actor, plan_id, payload.expected_version)
     if plan.publication_status not in ("draft", "published"):
         raise AppError(409, "PLAN_NOT_EDITABLE", "Этот план уже закрыт или отменён")
@@ -369,7 +425,13 @@ async def command(session, actor, plan_id, payload, action: str) -> PlanDTO:
         first_publication = plan.publication_status == "draft"
         await validate_fields(
             session,
-            PlanFields.model_validate({key: getattr(plan, key) for key in PlanFields.model_fields}),
+            PlanFields.model_validate(
+                {
+                    key: getattr(plan, key)
+                    for key in PlanFields.model_fields
+                    if key != "selected_place_id"
+                }
+            ),
         )
         plan.publication_status = "published"
         plan.moderation_status = "not_submitted"

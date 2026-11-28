@@ -2,6 +2,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
+from place_helpers import chosen_fields
 from sqlalchemy import func, select
 from test_accounts import clients as clients
 from test_accounts import headers, login, profile, upload
@@ -40,9 +41,18 @@ def test_public_profile_is_scoped_and_private_photo_remains_private(members):
     response = b.get(f"/api/v1/plans/{plan['id']}/author")
     assert response.status_code == 200, response.text
     public = response.json()["profile"]
-    assert set(public) == {"name", "age", "bio", "interests", "photo", "experience"}
+    assert set(public) == {
+        "name",
+        "age",
+        "bio",
+        "interests",
+        "photo",
+        "experience",
+        "photo_verified",
+    }
     assert public["experience"] == {
         "unique_confirmed_partners": 0,
+        "pleasant_communication": False,
         "policy_version": "D58-mutual-unique-partners-v1",
     }
     assert set(public["photo"]) == {"url"}
@@ -262,7 +272,7 @@ def test_concurrent_accepts_cannot_create_second_match(members, clients, migrati
 
 @pytest.mark.parametrize("_round", range(3))
 def test_concurrent_responses_limit_fifteen_and_new_person_after_decline(
-    clients, migration_engine, monkeypatch, _round
+    clients, migration_engine, monkeypatch, api_settings, _round
 ):
     from poidem.api import errors
 
@@ -280,6 +290,10 @@ def test_concurrent_responses_limit_fifteen_and_new_person_after_decline(
         return original(request, error)
 
     monkeypatch.setattr(errors, "internal_error_response", capture)
+    # 17 отдельных TestClient/loop/engine работают на одном Windows/Docker-хосте.
+    # Проверяем квоту и сериализацию, а не скорость хоста под браузерной нагрузкой.
+    # Рабочий timeout сервера не меняется; число потоков и строгие итоги прежние.
+    api_settings.db_statement_timeout_ms = 30000
     people = []
     for identity in range(1000, 1018):
         client = clients()
@@ -359,11 +373,12 @@ def test_parallel_duplicate_sends_create_one_active_response(members, migration_
 def test_edit_and_response_cannot_silently_change_consent(members):
     (a, aa), (b, bb) = members
     plan = published(members)
+    replacement = chosen_fields(a, aa, {"place": "Другой вход"})
     with ThreadPoolExecutor(max_workers=2) as pool:
         editing = pool.submit(
             lambda: a.patch(
                 f"/api/v1/plans/{plan['id']}",
-                json={"expected_version": plan["version"], "place": "Другой вход"},
+                json={"expected_version": plan["version"], **replacement},
                 headers=headers(aa),
             )
         )

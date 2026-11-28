@@ -46,7 +46,7 @@ test('admin overview, honest missing metrics, interactive graph, period and same
   const calls = await setup(page)
   await launch(page, '/admin')
   await expect.poll(async () => { const box = await page.locator('.admin-skip-link').boundingBox(); return box ? box.y + box.height : 0 }).toBeLessThanOrEqual(0)
-  await expect(page.getByRole('navigation', { name: 'Разделы администратора' }).getByRole('button')).toHaveCount(7)
+  await expect(page.getByRole('navigation', { name: 'Разделы администратора' }).getByRole('button')).toHaveCount(8)
   await expect(page.locator('.admin-metric').filter({ hasText: 'Новые пользователи' })).toContainText('12')
   await expect(page.locator('.admin-metric').filter({ hasText: 'Первые публикации' })).toContainText('Нет данных')
   await page.getByRole('button', { name: '7 дней', exact: true }).click()

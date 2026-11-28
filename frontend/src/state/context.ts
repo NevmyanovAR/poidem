@@ -5,6 +5,8 @@ import type { CreationQuota } from '../lib/planRules'
 import type { DialogPage, NavigationSummary } from '../types'
 
 export interface AppContextValue {
+  verification: Pick<ApiClient, 'verificationStatus' | 'verificationChallenge' | 'verificationSubmit' | 'verificationWithdraw' | 'verificationQueue' | 'verificationDetail' | 'verificationDecision' | 'mediaUrl'>
+  places: Pick<ApiClient, 'searchPlaces' | 'resolvePlace' | 'proposePlace' | 'cataloguePlaces' | 'cataloguePlace' | 'editCataloguePlace' | 'decideCataloguePlace' | 'importCatalogue' | 'placeChecks' | 'decidePlaceCheck'>
   admin: Pick<ApiClient, 'adminAnalytics' | 'adminExport' | 'adminUsers' | 'adminUser' | 'adminPlans' | 'adminPlan' | 'adminSystem' | 'adminTeam' | 'adminRole' | 'adminAudit' | 'adminNotifications' | 'adminIdeas' | 'adminCreateIdea' | 'adminEditIdea' | 'adminIdeaCommand' | 'adminIdeaPhoto' | 'mediaUrl'>
   editorial: Pick<ApiClient, 'ideas' | 'idea' | 'mediaUrl'>
   trackPlanView: (id: string) => Promise<{ recorded: boolean }>
@@ -12,7 +14,7 @@ export interface AppContextValue {
   refreshNavigation: () => Promise<void>
   activityRevision: number
   loadDialogs: (cursor?: string) => Promise<DialogPage>
-  meeting: Pick<ApiClient, 'survey' | 'saveFeedback' | 'reliability'>
+  meeting: Pick<ApiClient, 'survey' | 'saveFeedback' | 'reliability' | 'impressions' | 'saveImpressions' | 'withdrawImpressions'>
   safety: Pick<ApiClient, 'report' | 'block' | 'blocks' | 'unblock' | 'adminSession' | 'adminReports' | 'adminReport' | 'adminDecision' | 'reportPhotoUrl'>
   data: AppState
   plans: Plan[]

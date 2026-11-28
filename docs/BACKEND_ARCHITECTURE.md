@@ -1,5 +1,13 @@
 # Архитектура backend «Пойдём?»
 
+**D69 / развёртывание:** [отдельный production Compose и эксплуатация](PRODUCTION_DEPLOYMENT.md). Архитектура приложения прежняя: один FastAPI с cleanup/archive loops, один aiogram polling+outbox, PostgreSQL17 и приватный media volume API/ops. Разовые migrator/Certbot/backup не являются новыми постоянными бизнес-сервисами. Один HTTPS-origin Nginx; только80/443 наружу, head0014/39 таблиц прежние
+
+**D67 / этап 11В — актуальные требования:** свободные название/адрес без предварительного одобрения; необязательная проверка точной версии места, 0014/39 таблиц. Каталог D66 и исторические адреса сохранены, но не блокируют публикацию. Репутация — три независимых положительных признака, прежние фото/встречи + добровольные впечатления разных партнёров; старые приватные оценки не используются. [Устройство, формулы и API](FREE_PLACES_REPUTATION_STAGE11V.md)
+
+**D66 / предыдущая реализация:** собственный каталог общественных мест без 2ГИС/внешних ключей, ручная модерация/CSV/0013 (38 таблиц), исторические адреса сохранены. Фотоверификация — компактный UI без изменения backend-проверки. Это заменяет прежние условия внешнего Places API. [Реализация, API и запуск](LOCAL_PLACES_AND_VERIFICATION_UX.md)
+
+**D65:** тот же FastAPI/PostgreSQL, services/photo_verification.py, schemas/verification.py, api/routers/photo_verification.py, одна таблица и photo_revision Profile. Reuse Pillow/MEDIA_ROOT/MediaDeletion/orphan scan/admin_permissions/AdminAuditLog/notification_jobs; никакой новой инфраструктуры и пользователей. [Архитектура проверки фото](PHOTO_VERIFICATION_STAGE11B.md)
+
 **D62:** тот же монолит расширен services/admin_permissions.py, admin_team.py, editorial.py, admin_system.py и bot_health.py; routes/admin_management.py. Роли в прежнем User, редакционные идеи PostgreSQL вместо статического frontend-массива, минимальные heartbeat в том же bot/worker. Миграция 0010, без второй админки, очереди, пользователей или внешней инфраструктуры. [Архитектура и права](ADMIN_STAGE9B.md)
 
 D55: модуль services/safety.py и api/routers/safety.py расширяют прежний монолит для жалоб, персональных блокировок и закрытой модерации. Роли прежних User, сессия/CSRF прежние, административный frontend — /admin в том же React. Миграция 0008 меняет прежние таблицы; notification_jobs остаётся единственной очередью. B06/B11 уточнены заданием этапа 7 в рамках [SAFETY_STAGE7](SAFETY_STAGE7.md); санкции/апелляции/B10/B13 не согласованы

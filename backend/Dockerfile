@@ -1,4 +1,4 @@
-FROM python:3.13-slim AS runtime
+FROM python:3.13-slim@sha256:168d3a5d10f2152f8e8d77b6843ac82c22a846cfefeef7afdf9aa630404e82a7 AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 POIDEM_ROOT=/app
 WORKDIR /app
 COPY requirements.lock /app/backend/requirements.lock

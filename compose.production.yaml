@@ -1,0 +1,198 @@
+# Standalone file: NEVER merge with the development compose.yaml.
+name: poidem-production
+x-logging: &logging
+  driver: json-file
+  options: {max-size: 10m, max-file: "3"}
+x-runtime: &runtime
+  image: poidem-api:${RELEASE_TAG:?Set RELEASE_TAG}
+  build: {context: ./backend, target: runtime}
+  init: true
+  restart: unless-stopped
+  read_only: true
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  tmpfs: ["/tmp:size=64m,mode=1777"]
+  logging: *logging
+  stop_grace_period: 40s
+  pids_limit: 128
+  networks: [data, edge]
+x-environment: &environment
+  APP_ENV: production
+  DATABASE_URL: postgresql+psycopg://poidem_app:${POSTGRES_APP_PASSWORD:?Set app password}@db:5432/poidem
+  CORS_ORIGINS: ${CORS_ORIGINS:?Set exact origins}
+  TRUSTED_HOSTS: ${TRUSTED_HOSTS:?Set exact host}
+  MINI_APP_URL: ${MINI_APP_URL:?Set HTTPS URL}
+  API_PUBLIC_URL: ${API_PUBLIC_URL:?Set HTTPS API URL}
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?Set bot token}
+  TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-ShallWeGoo_bot}
+  SESSION_COOKIE_SECURE: "true"
+  SESSION_COOKIE_SAMESITE: ${SESSION_COOKIE_SAMESITE:-none}
+  SESSION_TTL_SECONDS: "86400"
+  INIT_DATA_MAX_AGE_SECONDS: "300"
+  AUTH_CLOCK_SKEW_SECONDS: "30"
+  LOG_LEVEL: INFO
+  DB_CONNECT_TIMEOUT_SECONDS: "5"
+  DB_STATEMENT_TIMEOUT_MS: "5000"
+  MEDIA_ROOT: /app/uploads/profiles
+  NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-true}
+  PHOTO_VERIFICATION_ENABLED: ${PHOTO_VERIFICATION_ENABLED:-false}
+  PHOTO_VERIFICATION_POLICY_APPROVED: ${PHOTO_VERIFICATION_POLICY_APPROVED:-false}
+  PHOTO_VERIFICATION_CONSENT_VERSION: ${PHOTO_VERIFICATION_CONSENT_VERSION:-}
+  PHOTO_VERIFICATION_CONSENT_TEXT: ${PHOTO_VERIFICATION_CONSENT_TEXT:-}
+  PHOTO_VERIFICATION_PENDING_HOURS: ${PHOTO_VERIFICATION_PENDING_HOURS:-}
+  PHOTO_VERIFICATION_REVIEWED_RETENTION_HOURS: ${PHOTO_VERIFICATION_REVIEWED_RETENTION_HOURS:-}
+  PHOTO_VERIFICATION_CHALLENGE_SECONDS: ${PHOTO_VERIFICATION_CHALLENGE_SECONDS:-600}
+  PHOTO_VERIFICATION_ATTEMPTS_PER_DAY: ${PHOTO_VERIFICATION_ATTEMPTS_PER_DAY:-3}
+  POSITIVE_IMPRESSIONS_THRESHOLD: ${POSITIVE_IMPRESSIONS_THRESHOLD:-3}
+
+services:
+  db:
+    image: ${POSTGRES_IMAGE:-postgres:17@sha256:b60e90042aa6b8dbecd58e224b3e36114dbf8ad754465264c2476ad58a86e45c}
+    restart: unless-stopped
+    shm_size: 256m
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 128
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+    networks: [data]
+    environment:
+      POSTGRES_USER: poidem_admin
+      POSTGRES_DB: poidem
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set admin password}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?Set app password}
+      POSTGRES_MIGRATION_PASSWORD: ${POSTGRES_MIGRATION_PASSWORD:?Set migration password}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    command: [postgres, -c, shared_buffers=256MB, -c, work_mem=4MB, -c, max_connections=40, -c, log_statement=none, -c, log_min_messages=fatal, -c, log_min_error_statement=panic]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./backend/docker/postgres-init.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  migrate:
+    <<: *runtime
+    profiles: [tools]
+    restart: "no"
+    mem_limit: 512m
+    cpus: 1.0
+    environment:
+      <<: *environment
+      TELEGRAM_BOT_TOKEN: ""
+      MIGRATION_DATABASE_URL: postgresql+psycopg://poidem_migrator:${POSTGRES_MIGRATION_PASSWORD:?Set migration password}@db:5432/poidem
+    depends_on: {db: {condition: service_healthy}}
+    command: [python, -m, alembic, -c, backend/alembic.ini, upgrade, head]
+
+  api:
+    <<: *runtime
+    mem_limit: 768m
+    cpus: 1.0
+    environment: *environment
+    command: [sh, -c, "umask 077; exec python -m poidem --host 0.0.0.0 --port 8001"]
+    volumes: [private-media:/app/uploads]
+    depends_on: {db: {condition: service_healthy}}
+    healthcheck:
+      test: [CMD, python, -c, "import json,os,urllib.request; r=urllib.request.Request('http://127.0.0.1:8001/health',headers={'Host':json.loads(os.environ['TRUSTED_HOSTS'])[0]}); urllib.request.urlopen(r,timeout=8)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  bot:
+    <<: *runtime
+    mem_limit: 384m
+    cpus: 0.5
+    environment: *environment
+    # Worker uses the DB outbox; no second polling service and no media mount.
+    command: [python, -m, poidem.bot]
+    depends_on: {api: {condition: service_healthy}}
+    healthcheck:
+      test: [CMD, python, /opt/ops/media.py, bot-health]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    volumes: [./deploy/ops:/opt/ops:ro]
+
+  web:
+    image: poidem-web:${RELEASE_TAG:?Set RELEASE_TAG}
+    build:
+      context: ./frontend
+      dockerfile: ../deploy/Dockerfile.web
+      additional_contexts: {nginx_config: ./deploy/nginx}
+      args: {VITE_TELEGRAM_BOT_USERNAME: "${TELEGRAM_BOT_USERNAME:-ShallWeGoo_bot}"}
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 64
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+    ports: ["80:80", "443:443"]
+    networks: [edge]
+    environment: {APP_DOMAIN: "${APP_DOMAIN:?Set domain}"}
+    volumes:
+      - type: bind
+        source: ./deploy/letsencrypt/live
+        target: /etc/letsencrypt/live
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ./deploy/letsencrypt/archive
+        target: /etc/letsencrypt/archive
+        read_only: true
+        bind: {create_host_path: false}
+      - ./deploy/acme:/var/www/acme:ro
+    depends_on: {api: {condition: service_healthy}}
+    healthcheck:
+      test: [CMD-SHELL, 'wget -q -O /dev/null --header="Host: $$APP_DOMAIN" http://127.0.0.1/.well-known/acme-challenge/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  bootstrap:
+    profiles: [tls]
+    image: poidem-web:${RELEASE_TAG:?Set RELEASE_TAG}
+    restart: "no"
+    mem_limit: 128m
+    logging: *logging
+    ports: ["80:80"]
+    environment: {APP_DOMAIN: "${APP_DOMAIN:?Set domain}"}
+    volumes:
+      - ./deploy/nginx/bootstrap.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./deploy/acme:/var/www/acme:ro
+    networks: [edge]
+
+  certbot:
+    profiles: [tls]
+    image: certbot/certbot@sha256:c5698da859429ccee0fcc299a8000368198222d1f9e789ab6e388b491e8ce06d
+    restart: "no"
+    mem_limit: 256m
+    logging: *logging
+    volumes:
+      - ./deploy/letsencrypt:/etc/letsencrypt
+      - ./deploy/acme:/var/www/acme
+
+  ops:
+    <<: *runtime
+    profiles: [tools]
+    restart: "no"
+    mem_limit: 384m
+    environment:
+      <<: *environment
+      TELEGRAM_BOT_TOKEN: ""
+    volumes:
+      - private-media:/app/uploads
+      - ./deploy/ops:/opt/ops:ro
+      - ./scripts/backup_local.py:/opt/backup_local.py:ro
+    entrypoint: [python, /opt/ops/media.py]
+
+networks:
+  data: {internal: true}
+  edge:
+volumes:
+  postgres-data:
+  private-media:

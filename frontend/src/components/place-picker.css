@@ -1,0 +1,35 @@
+.place-picker { min-width: 0; position: relative; }
+.place-input { position: relative; min-width: 0; }
+.place-input input { width: 100%; padding-right: 42px; text-overflow: ellipsis; }
+.place-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; display: grid; place-items: center; border: 0; background: transparent; color: var(--sky); cursor: pointer; }
+.place-options { list-style: none; margin: 0; padding: 4px; max-height: min(250px, 35dvh); overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--sky); border-radius: 12px; background: var(--wine); }
+.place-options button { width: 100%; padding: 10px 8px; text-align: left; border: 0; border-radius: 8px; background: transparent; color: var(--cream); cursor: pointer; }
+.place-options strong, .place-options span, .place-options small { display: block; overflow-wrap: anywhere; }
+.place-options span, .place-options small { color: var(--sky); font-size: .8rem; margin-top: 3px; }
+.place-options [aria-selected="true"] button, .place-options button:focus-visible { outline: 1px solid var(--sky); }
+.place-help { color: var(--sky); font-size: .75rem; line-height: 1.5; font-weight: 400; }
+.place-help summary { cursor: pointer; }
+.place-help p { margin: 6px 0 0; }
+.place-picker .text-link { display: block; font-size: inherit; margin-top: 6px; }
+
+.place-picker .small-note { overflow-wrap: anywhere; }
+
+.place-proposal-fields { display: grid; gap: 12px; margin-block: 16px; }
+.place-proposal-fields input, .place-proposal-fields select { width: 100%; }
+
+.admin-workspace .place-review-check { display: flex; flex-direction: row; align-items: flex-start; gap: 10px; min-height: 44px; margin-block: 12px; font-size: 12px; }
+.admin-workspace .place-review-check input { flex: 0 0 20px; width: 20px; min-width: 20px; height: 20px; min-height: 20px; padding: 0; margin: 2px 0 0; accent-color: var(--sky); }
+
+.meeting-place-fields { min-width: 0; margin: 0; padding: 16px; border: 1px solid var(--line); border-radius: 16px; display: grid; gap: 12px; }
+.meeting-place-fields legend { padding-inline: 6px; font-size: 13px; }
+.meeting-place-fields .field, .meeting-place-fields p { margin: 0; }
+.meeting-place-fields input { width: 100%; min-width: 0; }
+.reputation-badges { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px 14px; }
+.reputation-badges .experience-badge, .place-check-caption { margin: 0; font-size: 11px; line-height: 1.6; color: var(--sky); }
+.reputation-badges details { max-width: 100%; }
+.reputation-badges .small-note { max-width: 32em; }
+.place-check-caption { display: block; margin-top: 4px; }
+.impression-options { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px; }
+
+.place-review-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 8px; }
+.place-review-row-actions .text-link { min-height: 44px; }

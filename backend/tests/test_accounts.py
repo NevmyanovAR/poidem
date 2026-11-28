@@ -5,6 +5,7 @@ from contextlib import ExitStack
 import pytest
 from conftest import make_test_client
 from PIL import Image
+from place_helpers import FakePlaces
 from sqlalchemy import func, select, text
 from test_telegram_validation import signed_data
 
@@ -30,7 +31,9 @@ def clients(api_settings, migration_engine):
     with ExitStack() as stack:
 
         def new():
-            return stack.enter_context(make_test_client(create_app(api_settings)))
+            client = stack.enter_context(make_test_client(create_app(api_settings)))
+            client.app.state.test_places = FakePlaces(migration_engine)
+            return client
 
         yield new
     with migration_engine.begin() as connection:

@@ -27,7 +27,15 @@ class BodyLimitMiddleware:
             scope["path"].startswith("/api/v1/admin/inspiration/")
             and scope["path"].endswith("/photo")
         )
-        limit = self.photo_max_bytes + 65536 if photo_upload else 16384
+        photo_upload = photo_upload or (
+            scope["path"].startswith("/api/v1/me/photo-verification/")
+            and scope["path"].endswith("/selfie")
+        )
+        limit = (
+            self.photo_max_bytes + 65536
+            if photo_upload
+            else (131072 if scope["path"] == "/api/v1/admin/places/import" else 16384)
+        )
         parts = []
         length = 0
         while True:

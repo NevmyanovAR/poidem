@@ -31,6 +31,29 @@ class Category(Base):
 class Plan(IdentityMixin, CreatedMixin, Base):
     __tablename__ = "plans"
     __table_args__ = (
+        Index("ix_plans_place_check", "place_check_status", "created_at", "id"),
+        CheckConstraint(
+            "place_check_status IN ('pending','confirmed','unconfirmed')", name="place_check_valid"
+        ),
+        CheckConstraint(
+            "place_revision > 0 AND place_review_version > 0", name="place_versions_positive"
+        ),
+        CheckConstraint(
+            (
+                "(place_name IS NULL AND place_address IS NULL) OR "
+                "(length(btrim(place_name)) > 0 AND length(btrim(place_address)) > 0 AND "
+                "place_name IS NOT NULL AND place_address IS NOT NULL) "
+            ),
+            name="place_fields_pair",
+        ),
+        CheckConstraint(
+            (
+                "place_check_status = 'pending' OR (place_checked_revision = "
+                "place_revision AND place_checked_revision IS NOT NULL AND "
+                "place_checked_at IS NOT NULL) "
+            ),
+            name="place_review_current",
+        ),
         Index("ix_plans_created_id", "created_at", "id"),
         UniqueConstraint("id", "author_id", name="uq_plans_id_author_id"),
         CheckConstraint("length(btrim(title)) > 0", name="title_nonempty"),
@@ -49,6 +72,19 @@ class Plan(IdentityMixin, CreatedMixin, Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     time_zone: Mapped[str] = mapped_column(Text)
     place: Mapped[str] = mapped_column(Text)
+    place_name: Mapped[str | None] = mapped_column(Text)
+    place_address: Mapped[str | None] = mapped_column(Text)
+    place_revision: Mapped[int] = mapped_column(server_default="1")
+    place_review_version: Mapped[int] = mapped_column(server_default="1")
+    place_check_status: Mapped[str] = mapped_column(Text, server_default="pending")
+    place_checked_revision: Mapped[int | None]
+    place_checked_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    place_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    place_check_reason: Mapped[str | None] = mapped_column(Text)
+    place_policy_version: Mapped[str | None] = mapped_column(Text, server_default="free-place-v1")
+    venue: Mapped[dict | None] = mapped_column(JSONB)
     description: Mapped[str] = mapped_column(Text)
     publication_status: Mapped[str] = mapped_column(
         state_type("publication_status", "draft", "submitted", "published", "closed", "cancelled"),

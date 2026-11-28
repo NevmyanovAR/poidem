@@ -20,6 +20,7 @@ from poidem.db.models import (
 )
 from poidem.schemas.profile import OwnProfileDTO, PhotoDTO, ProfileWrite
 from poidem.security.session import digest, lock_actor
+from poidem.services import photo_verification
 from poidem.services.media import queue_deletions
 
 
@@ -51,6 +52,7 @@ async def get_profile(session, user_id: uuid.UUID) -> OwnProfileDTO | None:
         photo=photo_dto(photo),
         interest_ids=interests,
         version=profile.version,
+        photo_verified=await photo_verification.verified(session, profile, photo),
         moderation_status=profile.moderation_status,
     )
 
@@ -90,6 +92,11 @@ async def save_profile(session, actor, payload: ProfileWrite) -> tuple[OwnProfil
         profile = Profile(user_id=actor.user_id, version=1, **values)
         session.add(profile)
     else:
+        if profile.photo_id != photo.id:
+            from poidem.services.photo_verification import invalidate_photo
+
+            await invalidate_photo(session, actor.user_id)
+            profile.photo_revision += 1
         for name, value in values.items():
             setattr(profile, name, value)
         profile.version += 1
@@ -129,12 +136,36 @@ async def delete_account(session, actor) -> list[str]:
             "Перед удалением аккаунта передай права владельца и отзови собственную роль",
         )
     photos = (await session.scalars(select(Photo).where(Photo.owner_id == user.id))).all()
+    from poidem.db.models import NotificationJob
+
+    await session.execute(
+        delete(NotificationJob).where(
+            NotificationJob.recipient_id == user.id,
+            NotificationJob.kind.in_(
+                ("photo_verification_approved", "photo_verification_rejected")
+            ),
+        )
+    )
     # До определения судьбы совместных записей нельзя удалять чужую историю.
-    handled = {"users", "profiles", "photos", "auth_sessions", "bot_bindings", "analytics_events"}
+    handled = {
+        "users",
+        "profiles",
+        "photos",
+        "auth_sessions",
+        "bot_bindings",
+        "analytics_events",
+        "place_selections",
+        "public_places",
+        "photo_verifications",
+    }
     for table in Base.metadata.tables.values():
         if table.name in handled:
             continue
-        columns = [fk.parent for fk in table.foreign_keys if fk.column.table.name == "users"]
+        columns = [
+            fk.parent
+            for fk in table.foreign_keys
+            if fk.column.table.name == "users" and fk.ondelete != "SET NULL"
+        ]
         if (
             columns
             and await session.scalar(
@@ -155,7 +186,20 @@ async def delete_account(session, actor) -> list[str]:
         raise AppError(
             409, "ACCOUNT_HAS_RELATED_DATA", "Удаление записей модерации требует отдельного порядка"
         )
-    keys = [photo.storage_key for photo in photos]
+    from poidem.db.models import PhotoVerification
+    from poidem.services.photo_verification import clear_materials
+
+    verifications = (
+        await session.scalars(
+            select(PhotoVerification).where(PhotoVerification.user_id == user.id).with_for_update()
+        )
+    ).all()
+    verification_keys = [
+        key for entry in verifications for key in (entry.primary_key, entry.selfie_key) if key
+    ]
+    for verification in verifications:
+        await clear_materials(session, verification)
+    keys = [photo.storage_key for photo in photos] + verification_keys
     await queue_deletions(session, keys)
     await session.execute(delete(ProfileInterest).where(ProfileInterest.user_id == user.id))
     await session.execute(delete(Profile).where(Profile.user_id == user.id))
@@ -177,6 +221,9 @@ async def delete_account(session, actor) -> list[str]:
                 [
                     digest(f"login:{actor.telegram_id}"),
                     digest(f"photo:{user.id}"),
+                    digest(f"verification-photo:{user.id}"),
+                    digest(f"places:search:{user.id}"),
+                    digest(f"places:resolve:{user.id}"),
                 ]
             )
         )

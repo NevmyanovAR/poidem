@@ -140,6 +140,7 @@ export function scenario(options: { full?: boolean; matched?: boolean; noUsernam
           if (attempt.status === 'accepted') state.matched = true
           return json({ response: response(attempt, viewer) })
         }
+        if (path.endsWith('/impressions')) return json({ eligible: false, own_options: [], submitted: false, consent_version: 'positive-impressions-v1' })
         if (path === `/api/v1/matches/${matchId}` && state.matched) return json({ match: match(viewer) })
         if (path === `/api/v1/matches/${matchId}/contact` && state.matched) return json({ available: !options.noUsername,
           telegram_url: options.noUsername ? null : 'https://t.me/Synthetic_Partner', reason: options.noUsername ? 'username_missing' : null })

@@ -48,5 +48,21 @@ class SurveyDTO(BaseModel):
 
 
 class ExperienceDTO(BaseModel):
+    pleasant_communication: bool = False
     unique_confirmed_partners: int = Field(ge=0)
     policy_version: Literal["D58-mutual-unique-partners-v1"] = "D58-mutual-unique-partners-v1"
+
+
+class ImpressionWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    options: list[Literal["pleasant", "interesting", "comfortable"]] = Field(max_length=3)
+    consent_accepted: StrictBool
+    consent_version: Literal["positive-impressions-v1"]
+
+    @model_validator(mode="after")
+    def voluntary(self):
+        if len(set(self.options)) != len(self.options) or (
+            self.options and not self.consent_accepted
+        ):
+            raise ValueError("Выбери разные варианты и подтверди влияние на публичную отметку")
+        return self

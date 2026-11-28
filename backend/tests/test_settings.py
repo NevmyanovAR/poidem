@@ -7,7 +7,16 @@ from poidem.settings import Settings
 
 
 def local_settings(**overrides):
-    values = {"database_url": "postgresql+psycopg://app:unit-only@127.0.0.1/poidem"}
+    # Unit defaults must not inherit the live tunnel's Secure cookie / origins
+    # when compose supplies those values as process environment variables.
+    values = {
+        "database_url": "postgresql+psycopg://app:unit-only@127.0.0.1/poidem",
+        "app_env": "development",
+        "session_cookie_secure": None,
+        "session_cookie_samesite": "lax",
+        "cors_origins": ["http://localhost:5173"],
+        "trusted_hosts": ["localhost"],
+    }
     values.update(overrides)
     return Settings(_env_file=None, **values)
 

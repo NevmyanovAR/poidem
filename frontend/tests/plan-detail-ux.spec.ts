@@ -91,7 +91,7 @@ test('public experience is a positive badge without a number; personal statistic
   await page.screenshot({ path: testInfo.outputPath('person-no-experience.png') })
   await page.route('**/api/v1/me/reliability', route => route.fulfill({ json: { unique_confirmed_partners: 12, policy_version: 'D58-mutual-unique-partners-v1' } }))
   await launch(page, '/profile')
-  await expect(page.getByLabel('Уникальных партнёров со взаимным подтверждением встречи: 12')).toHaveText('Взаимные подтверждения · 12')
+  await expect(page.getByLabel('Подтверждённые знакомства: 12')).toHaveText('Подтверждённые знакомства · 12')
 })
 
 for (const state of ['blocked', 'full'] as const) test(`${state} server capacity is never bypassed by the redesigned page`, async ({ page }) => {

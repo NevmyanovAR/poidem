@@ -11,17 +11,17 @@ test('live plan filter works at mobile widths without a submit and preserves rea
   await page.goto('/create', { waitUntil: 'domcontentloaded' })
   for (const width of widths) {
     await page.setViewportSize({ width, height: 900 })
-    for (const [field, value] of [['title', 'хуй'], ['description', 'наркотики'], ['place', 'стриптиз']]) {
+    for (const [field, value] of [['title', 'хуй'], ['description', 'наркотики'], ['placeName', 'стриптиз'], ['placeAddress', 'закрытая крыша']]) {
       const input = page.locator(`form [name=${field}]`)
       await input.fill(value)
       await expect(input).toHaveAttribute('aria-invalid', 'true')
-      await expect(page.locator(`#error-${field}`)).toBeVisible()
+      await expect(page.locator(field.startsWith('place') ? '#error-place' : `#error-${field}`)).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
       await input.fill('Кофе')
       await expect(input).toHaveAttribute('aria-invalid', 'false')
     }
   }
-  await page.locator('[name=place]').fill('Закрытая крыша')
+  await page.locator('[name=placeName]').fill('Закрытая крыша')
   await page.screenshot({ path: testInfo.outputPath('live-plan-filter.png'), fullPage: true })
 })
 

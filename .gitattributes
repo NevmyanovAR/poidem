@@ -1,2 +1,6 @@
 # Init-скрипт PostgreSQL должен запускаться в Linux после Windows checkout.
 backend/docker/*.sh text eol=lf
+deploy/*.sh text eol=lf
+deploy/ops/*.py text eol=lf
+deploy/nginx/*.template text eol=lf
+compose.production.yaml text eol=lf

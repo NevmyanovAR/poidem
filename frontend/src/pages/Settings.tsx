@@ -45,6 +45,7 @@ function SettingsContent() {
   return <section className="settings-page">
     <Link className="back-link" to="/profile"><ArrowLeft size={16} />К анкете</Link><h1>Настройки</h1>
     <div className="settings-rows">
+      <Link className="settings-row" to="/settings/photo-verification"><ShieldCheck size={21} /><span><strong>Подтвердить фото</strong><small>Добровольная сверка фотографий</small></span><ChevronRight size={18} /></Link>
       <Link className="settings-row" to="/settings/blocked"><Shield size={21} /><span><strong>Безопасность</strong><small>Заблокированные пользователи</small></span><ChevronRight size={18} /></Link>
       <a className="settings-row" href={notificationUrl} target="_blank" rel="noopener noreferrer" onClick={event => { const app = window.Telegram?.WebApp; if (app?.openTelegramLink) { event.preventDefault(); app.openTelegramLink(notificationUrl) } }}><Bell size={21} /><span><strong>Уведомления</strong><small>Уведомления от бота</small></span><ChevronRight size={18} /></a>
       {userId && role === 'admin' && <Link className="settings-row" to="/admin"><ShieldCheck size={21} /><span><strong>Управление приложением</strong><small>Кабинет сотрудника</small></span><ChevronRight size={18} /></Link>}

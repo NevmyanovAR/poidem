@@ -1,0 +1,10 @@
+access_log off;
+error_log /dev/null;
+server_tokens off;
+server { listen 80 default_server; server_name _; return 444; }
+server {
+    listen 80;
+    server_name ${APP_DOMAIN};
+    location ^~ /.well-known/acme-challenge/ { root /var/www/acme; try_files $uri =404; }
+    location / { return 503; }
+}

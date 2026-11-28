@@ -1,7 +1,7 @@
 import type { AuthorizationState, ModerationState } from '../types'
 
 export function AuthorizationStatus({ value }: { value: AuthorizationState }) {
-  const text = value.status === 'verified' ? 'Данные Telegram подтверждены сервером'
+  const text = value.status === 'verified' ? 'Вход через Telegram'
     : value.status === 'checking' ? 'Проверяем данные авторизации'
     : value.status === 'error' ? value.message : 'Telegram-авторизация пока не подтверждена'
   return <p className="trust-status" role="status">{text}</p>

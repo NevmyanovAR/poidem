@@ -66,7 +66,7 @@ test('launch data reaches the real validator before the external SDK loads', asy
   expect(response.headers()['set-cookie']).toBeUndefined()
   await expect(page.getByText('Не удалось подтвердить вход через Telegram', { exact: true })).toBeVisible()
   expect(sent).toEqual([untrustedLaunch]) // Одно декодирование, без пересборки строки и повтора 401.
-  await expect(page.getByText('Данные Telegram подтверждены сервером', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Вход через Telegram', { exact: true })).toHaveCount(0)
   expect(await page.evaluate(raw => JSON.stringify(localStorage).includes(raw), untrustedLaunch)).toBe(false)
 })
 
@@ -86,7 +86,7 @@ for (const failure of ['network', 'gateway'] as const) {
     await rejected
     await expect(page.getByText('Не удалось подтвердить вход через Telegram', { exact: true })).toBeVisible()
     expect(attempts).toBe(2)
-    await expect(page.getByText('Данные Telegram подтверждены сервером', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('Вход через Telegram', { exact: true })).toHaveCount(0)
   })
 }
 
@@ -123,7 +123,7 @@ test('an obsolete launch is not retried after the Telegram account changes', asy
   releaseFirst()
   await expect(page.getByText('Не удалось подтвердить вход через Telegram', { exact: true })).toBeVisible()
   expect(launches).toEqual([untrustedLaunch, nextLaunch])
-  await expect(page.getByText('Данные Telegram подтверждены сервером', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Вход через Telegram', { exact: true })).toHaveCount(0)
 })
 
 // Изолированные отрицательные проверки контракта клиента: ответы подменены
@@ -153,7 +153,7 @@ test.describe('isolated client cookie contract', () => {
         ? 'Не удалось сохранить сессию. Открой Mini App заново'
         : 'Сессия другого аккаунта. Открой Mini App заново', { exact: true })).toBeVisible()
       expect({ logins, checks }).toEqual({ logins: 1, checks: 1 })
-      await expect(page.getByText('Данные Telegram подтверждены сервером', { exact: true })).toHaveCount(0)
+      await expect(page.getByText('Вход через Telegram', { exact: true })).toHaveCount(0)
     })
   }
 
@@ -170,6 +170,6 @@ test.describe('isolated client cookie contract', () => {
     await page.goto(launchUrl, { waitUntil: 'domcontentloaded' })
     await expect(page.getByText('Не удалось выполнить запрос', { exact: true })).toBeVisible()
     expect({ logins, checks }).toEqual({ logins: 2, checks: 1 })
-    await expect(page.getByText('Данные Telegram подтверждены сервером', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('Вход через Telegram', { exact: true })).toHaveCount(0)
   })
 })

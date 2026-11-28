@@ -1,3 +1,5 @@
+import { ReputationBadges } from './ReputationBadges'
+import { PositiveImpressions } from './PositiveImpressions'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAppData } from '../state/context'
 import { meetingLabels } from '../api/feedback'
@@ -5,18 +7,17 @@ import type { Experience, SurveyState } from '../api/feedback'
 
 export function ExperienceCaption({ value, own = false }: { value?: Experience | null; own?: boolean }) {
   if (!value) return null
-  if (own) return <p className="reliability-status" title="Число уникальных партнёров, с которыми встречу подтвердили оба участника. Самоотчёт, без проверки факта встречи" aria-label={`Уникальных партнёров со взаимным подтверждением встречи: ${value.unique_confirmed_partners}`}>Взаимные подтверждения · {value.unique_confirmed_partners}</p>
-  if (!(value.unique_confirmed_partners > 0)) return null
-  return <details className="experience-badge"><summary>Есть подтверждённые встречи</summary><p className="small-note">Участники хотя бы одной встречи подтвердили, что встретились</p></details>
+  if (own) return <p className="reliability-status" title="Число уникальных партнёров, с которыми встречу подтвердили оба участника" aria-label={`Подтверждённые знакомства: ${value.unique_confirmed_partners}`}>Подтверждённые знакомства · {value.unique_confirmed_partners}</p>
+  return <ReputationBadges experience={value} />
 }
 
-export function OwnExperience() {
+export function OwnExperience({ hidePhoto = false }: { hidePhoto?: boolean }) {
   const { authorization } = useAppData()
-  return authorization.status === 'verified' ? <OwnExperienceValue key={authorization.userId} /> : null
+  return authorization.status === 'verified' ? <OwnExperienceValue key={authorization.userId} hidePhoto={hidePhoto} /> : null
 }
 
-function OwnExperienceValue() {
-  const { meeting } = useAppData()
+function OwnExperienceValue({ hidePhoto }: { hidePhoto: boolean }) {
+  const { meeting, data } = useAppData()
   const [value, setValue] = useState<Experience | null>(null), [error, setError] = useState(false)
   const alive = useRef(false)
   const load = useCallback(async () => {
@@ -28,9 +29,10 @@ function OwnExperienceValue() {
     queueMicrotask(() => { if (alive.current) void load() })
     const visible = () => { if (document.visibilityState === 'visible') void load() }
     document.addEventListener('visibilitychange', visible)
-    return () => { alive.current = false; document.removeEventListener('visibilitychange', visible) }
+    window.addEventListener('poidem:foreground-refresh', visible)
+    return () => { alive.current = false; document.removeEventListener('visibilitychange', visible); window.removeEventListener('poidem:foreground-refresh', visible) }
   }, [load])
-  return <><ExperienceCaption value={value} own />{error && <p className="small-note">Не удалось обновить подтверждения <button className="text-link" type="button" onClick={() => void load()}>Повторить</button></p>}</>
+  return <><ReputationBadges photoVerified={!hidePhoto && data.profile?.photoVerified} experience={value} /><ExperienceCaption value={value} own />{error && <p className="small-note">Не удалось обновить подтверждения <button className="text-link" type="button" onClick={() => void load()}>Повторить</button></p>}</>
 }
 
 export function MeetingFeedback({ matchId, onSaved }: { matchId: string; onSaved?: () => void }) {
@@ -97,6 +99,7 @@ function FeedbackPanel({ matchId, onSaved }: { matchId: string; onSaved?: () => 
         <div className="plan-actions"><button type="submit" className="button button-outline" disabled={saving || met === null || met && !rating}>{saving ? 'Сохраняем…' : 'Сохранить ответ'}</button>{editing && <button className="text-link" type="button" disabled={saving} onClick={() => setEditing(false)}>Отмена</button>}</div>
       </form>}
     </>}
+    {state && <PositiveImpressions matchId={matchId} resultKey={resultKey ?? ''} onSaved={onSaved} />}
     {error && <p role="alert" className="field-error">{error} <button type="button" className="text-link" disabled={saving} onClick={() => void load()}>Повторить загрузку</button></p>}
   </section>
 }

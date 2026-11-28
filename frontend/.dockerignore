@@ -1,0 +1,16 @@
+**
+!package.json
+!package-lock.json
+!index.html
+!vite.config.ts
+!tsconfig*.json
+!src/
+!src/**
+!public/
+!public/**
+node_modules/
+dist/
+test-results/
+tests/
+.env
+.env.*

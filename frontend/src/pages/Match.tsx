@@ -1,3 +1,5 @@
+import { PlaceCheckCaption } from '../components/PlaceCheckCaption'
+import { ReputationBadges } from '../components/ReputationBadges'
 import { ProfilePhoto } from '../components/PhotoViewer'
 import { RefreshGate, useAutoRefresh } from '../lib/autoRefresh'
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
@@ -12,7 +14,7 @@ import { meetingDateLabel } from '../lib/date'
 import { matchPartner } from '../lib/recordActions'
 import { ArchiveResponseHistory } from '../components/ResponseHistory'
 import { SafetyMenu } from '../components/SafetyMenu'
-import { ExperienceCaption, MeetingFeedback } from '../components/MeetingFeedback'
+import { MeetingFeedback } from '../components/MeetingFeedback'
 
 export function Match() {
   const location = useLocation()
@@ -60,10 +62,10 @@ export function Match() {
     <div className="match-heading"><SafetyMenu personName={partner?.name} context={{ target_type: 'match', context_type: 'match', context_id: match.id }} allowBlock onBlocked={() => void reload()} /><span className="eyebrow">Вы выбрали друг друга</span><h1>Кажется, вам <em>по пути</em></h1><Glasses /></div>
     <div className="match-portraits">{match.participants.map((part, index) => <Fragment key={part.role}><div className={`match-portrait ${index ? 'second' : 'first'}`}>{part.profile ? <ProfilePhoto key={part.profile.photo} src={part.profile.photo} name={part.profile.name} eager /> : <div className="match-photo-unavailable">Анкета недоступна</div>}<span title={part.profile?.name}>{part.profile?.name ?? 'Участник'}</span></div>{index === 0 && <Heart className="match-heart" size={30} />}</Fragment>)}</div>
     <p className="match-description">План есть. Пара тоже. Осталось договориться о деталях</p>
-    <div className="match-plan"><Photo src={match.image} alt={match.title} /><div><span className="eyebrow">Ваш план</span><h2>{match.title}</h2><p><CalendarDays size={15} />{meetingDateLabel(match)}</p><p><MapPin size={15} />{match.place}</p></div></div>
+    <div className="match-plan"><Photo src={match.image} alt={match.title} /><div><span className="eyebrow">Ваш план</span><h2>{match.title}</h2><p><CalendarDays size={15} />{meetingDateLabel(match)}</p><p><MapPin size={15} />{match.place}</p><PlaceCheckCaption value={match.placeCheckStatus} /></div></div>
     {match.archived && match.viewerRole === 'author' && <ArchiveResponseHistory planId={match.planId} />}
     <MeetingFeedback matchId={match.id} onSaved={refreshExperience} />
-    {partner && <section className="match-partner" aria-label="Анкета партнёра"><h2>{partner.name}, {partner.age}</h2><ExperienceCaption value={partner.experience} /><p>{partner.bio}</p><div className="interest-tags">{partner.interests.map(interest => <span className="chip" key={interest}>{interest}</span>)}</div></section>}
+    {partner && <section className="match-partner" aria-label="Анкета партнёра"><h2>{partner.name}, {partner.age}</h2><ReputationBadges photoVerified={partner.photoVerified} experience={partner.experience} /><p>{partner.bio}</p><div className="interest-tags">{partner.interests.map(interest => <span className="chip" key={interest}>{interest}</span>)}</div></section>}
     {match.meetingCancelled && <p className="small-note">Встреча отменена. Переписка сохранена</p>}
     <Link className="button button-primary match-contact" to={`/match/${match.id}/chat`} state={{ returnTo: backTo, fromMatch: true }}>Открыть чат{match.unreadCount ? ` · ${match.unreadCount}` : ''}</Link>
     {contact.available && contact.telegramUrl && <a className="button button-outline match-contact" href={contact.telegramUrl} target="_blank" rel="noopener noreferrer" onClick={event => {

@@ -1,0 +1,103 @@
+/* D68 / 11Г: scoped visual rhythm; welcome, home and admin keep their layout. */
+.polished-ui { --ui-space-1: 4px; --ui-space-2: 8px; --ui-space-3: 12px; --ui-space-4: 16px; --ui-space-6: 24px; --ui-space-8: 32px; }
+.polished-ui .page-heading, .inspiration-heading > .page-heading { padding: 28px 0 20px; max-width: 100%; }
+.polished-ui .page-heading > .eyebrow, .inspiration-heading .page-heading > .eyebrow { margin-bottom: 12px; }
+.polished-ui .page-heading h1, .inspiration-heading .page-heading h1 { font-size: clamp(46px, 4.4vw, 64px); line-height: 1.06; }
+.polished-ui .page-heading h1 em, .inspiration-heading .page-heading h1 em { display: inline-block; max-width: 100%; line-height: .84; padding: .18em .09em .24em; vertical-align: baseline; }
+.polished-ui .heading-description, .inspiration-heading .heading-description { margin-top: 12px; line-height: 1.65; max-width: 56ch; }
+.polished-ui .filter-row { gap: var(--ui-space-2); padding: 0 0 20px; }
+.polished-ui button.chip { min-height: 40px; }
+.polished-ui :is(.text-link, .back-link, .person-more > summary) { min-height: 44px; }
+.polished-ui .plan-grid { gap: 28px 24px; }
+.polished-ui .card-category { margin-top: var(--ui-space-4); margin-bottom: var(--ui-space-2); }
+.polished-ui .plan-content h2 { margin-bottom: 10px; overflow-wrap: anywhere; }
+.polished-ui .plan-meta { align-items: flex-start; }
+.polished-ui .plan-meta > svg { margin-top: 2px; }
+.polished-ui .plan-meta, .polished-ui .record-meta { overflow-wrap: anywhere; }
+.polished-ui .form-page { padding-top: var(--ui-space-6); column-gap: clamp(32px, 4vw, 64px); }
+.polished-ui .form-intro .page-heading { padding-top: 0; padding-bottom: var(--ui-space-4); }
+.polished-ui .form-panel { padding: 28px; }
+.polished-ui .form-progress { gap: 20px; padding-bottom: var(--ui-space-3); margin-bottom: var(--ui-space-4); }
+.polished-ui .form-panel-title { margin-bottom: var(--ui-space-4); }
+.polished-ui .form-panel h2 { font-size: clamp(28px, 3vw, 33px); margin-top: var(--ui-space-3); margin-bottom: var(--ui-space-4); }
+.polished-ui .form-panel-title h2 { margin: 0; }
+.polished-ui .fields { gap: var(--ui-space-4); }
+.polished-ui .plan-limit { margin-bottom: var(--ui-space-3); padding-block: 10px; }
+.polished-ui .reliability-status { margin: 8px 0 16px; }
+.polished-ui .reputation-badges { gap: 0 12px; align-items: flex-start; }
+.polished-ui .reputation-badges :is(.photo-verified, .experience-badge > summary) { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 5px 0; border: 0; border-radius: 0; font-size: 11px; line-height: 1.5; }
+.polished-ui .reputation-badges .experience-badge { margin: 0; }
+.polished-ui .reputation-badges details[open] { flex-basis: 100%; }
+.polished-ui .reputation-badges .small-note { margin-top: 2px; margin-bottom: 8px; }
+.polished-ui .place-check-caption { font-size: 11px; line-height: 1.6; }
+.polished-ui details.place-check-caption > summary { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; min-height: 32px; list-style: none; }
+.polished-ui details.place-check-caption > summary::-webkit-details-marker { display: none; }
+.polished-ui .person-plan { margin-top: var(--ui-space-3); }
+.polished-ui .person-plan h2 { margin-bottom: var(--ui-space-2); }
+.polished-ui .person-response { margin-top: var(--ui-space-3); }
+.polished-ui .person-utilities { gap: 0 16px; margin-top: 4px; }
+.polished-ui .person-more { margin-top: var(--ui-space-2); padding-block: 8px; }
+.polished-ui .dialog-card { padding: 12px 14px; }
+.polished-ui .dialog-heading { flex-wrap: wrap; column-gap: 8px; row-gap: 3px; }
+.polished-ui .dialog-heading h2 { flex: 1 1 auto; }
+.polished-ui .dialog-heading time { margin-left: 0; }
+.polished-ui .dialog-details { margin-top: 0; padding-block: 8px; }
+.polished-ui .record-heading:has(.record-menu) { padding-right: 40px; }
+.polished-ui .record-menu > summary { width: 40px; height: 40px; }
+.polished-ui .record-menu-items { top: 44px; }
+.polished-ui .record-menu-items :is(a, button) { min-height: 44px; display: flex; align-items: center; }
+.polished-ui .verification-page { padding-top: 20px; margin: 0 auto; gap: 12px; }
+.polished-ui .verification-page > :not(dialog) { margin-block: 0; }
+.polished-ui .verification-page > h1 { font-size: clamp(34px, 4.5vw, 46px); line-height: 1.08; }
+.polished-ui .verification-page > .back-link { margin-bottom: 0; }
+.polished-ui .verification-framing { width: 96px; padding: 9px; }
+.polished-ui .verification-framing > svg { width: 38px; height: 38px; }
+.polished-ui .verification-agree { min-height: 44px; align-items: flex-start; }
+.polished-ui .verification-terms-link { display: inline-flex; min-height: 44px; margin: 0; padding: 6px 0; }
+.polished-ui .verification-camera { max-height: min(42svh, 400px); }
+.polished-ui .verification-shot { max-height: 48svh; }
+.polished-ui .verification-page:has(video) > h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.polished-ui .verification-camera-actions, .polished-ui .verification-preview-actions { display: flex; flex-direction: column; gap: 12px; }
+.polished-ui .verification-camera-actions .button, .polished-ui .verification-preview-actions .button { min-height: 48px; white-space: normal; }
+body:has(.polished-ui) .site-footer { margin-top: 28px; }
+@media (max-width: 680px) {
+  .polished-ui .page-heading, .inspiration-heading > .page-heading { padding: 20px 0 16px; }
+  .polished-ui .page-heading > .eyebrow, .inspiration-heading .page-heading > .eyebrow { margin-bottom: 8px; font-size: 9px; letter-spacing: .13em; }
+  .polished-ui .page-heading h1 { font-size: clamp(34px, 9.1vw, 40px); line-height: 1.08; }
+  .polished-ui .heading-with-action .page-heading h1, .inspiration-heading .page-heading h1 { font-size: clamp(32px, 8.9vw, 38px); line-height: 1.08; }
+  .polished-ui .heading-with-action .page-heading h1 em, .inspiration-heading .page-heading h1 em { display: block; width: fit-content; line-height: .84; margin-top: 4px; padding: .18em .09em .24em; }
+  .polished-ui .dialogs-page .page-heading h1 { font-size: clamp(30px, 8.5vw, 36px); }
+  .polished-ui .dialogs-page .page-heading h1 em { display: inline-block; width: auto; padding-left: .14em; }
+  .polished-ui .heading-description, .inspiration-heading .heading-description { font-size: 12px; line-height: 1.65; margin-top: 8px; }
+  .polished-ui .filter-row { padding-bottom: 16px; gap: 8px; }
+  .polished-ui .filter-row:not(.plans-tabs) { margin-inline: 0; max-width: 100%; padding-inline: 0; }
+  .polished-ui button.chip { min-height: 44px; }
+  .polished-ui .form-page { padding-top: 16px; row-gap: 8px; }
+  .polished-ui .form-intro .page-heading { padding: 0 0 12px; }
+  .polished-ui .form-page .form-intro h1 { font-size: clamp(32px, 9vw, 38px); }
+  .polished-ui .form-page:not(.profile-page) > .form-intro h1 em { display: block; width: fit-content; max-width: 100%; margin-top: 0; line-height: .84; padding: .18em .09em .24em; }
+  .polished-ui .form-panel { padding: 20px 16px; }
+  .polished-ui :is(input:not([type=checkbox]):not([type=radio]), select, textarea) { font-size: 16px; min-height: 48px; }
+  .polished-ui .meeting-place-fields { padding: 12px; gap: 12px; }
+  .polished-ui .form-actions { flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+  .polished-ui .form-actions .button { flex: 1 1 9em; min-width: 0; padding-inline: 16px; white-space: normal; }
+  .polished-ui .form-actions .button-outline { flex: 0 1 auto; }
+  .polished-ui .person-layout { gap: 12px; }
+  .polished-ui .person-photo { height: clamp(180px, 26svh, 235px); }
+  .polished-ui .person-details h1 { font-size: clamp(28px, 8.2vw, 34px); }
+  .polished-ui .dialog-card { padding: 10px 12px; }
+  .polished-ui .dialog-details { margin-left: 58px; }
+  .polished-ui .verification-page { padding-top: 12px; }
+  .polished-ui .verification-page > h1 { font-size: clamp(32px, 9vw, 38px); }
+  .polished-ui .chat-page h1 { margin: 12px 0 16px; font-size: 32px; }
+  html[data-visual-keyboard] body:has(.polished-ui) :is(.mobile-nav, .create-fab, .site-footer) { display: none; }
+  html[data-visual-keyboard] .polished-ui { padding-bottom: 24px; }
+  html[data-visual-keyboard] .polished-ui .chat-messages { min-height: 80px; height: 25svh; }
+}
+@media (max-width: 375px) {
+  .polished-ui .reputation-badges :is(.photo-verified, .experience-badge > summary) { font-size: 10.5px; }
+}
+@media (max-width: 680px) and (max-height: 520px) {
+  body:has(.polished-ui :is(input, textarea):focus) :is(.mobile-nav, .create-fab, .site-footer) { display: none; }
+  .polished-ui .chat-messages { min-height: 80px; height: 28dvh; }
+}

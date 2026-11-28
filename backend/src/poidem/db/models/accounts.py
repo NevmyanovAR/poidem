@@ -41,7 +41,9 @@ class User(IdentityMixin, CreatedMixin, Base):
     )
     version: Mapped[int] = mapped_column(server_default="1")
     profile: Mapped["Profile | None"] = relationship(viewonly=True, lazy="raise")
-    plans: Mapped[list["Plan"]] = relationship(viewonly=True, lazy="raise")
+    plans: Mapped[list["Plan"]] = relationship(
+        viewonly=True, lazy="raise", foreign_keys="Plan.author_id"
+    )
     photos: Mapped[list["Photo"]] = relationship(viewonly=True, lazy="raise")
 
 

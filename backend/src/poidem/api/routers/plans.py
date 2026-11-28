@@ -50,12 +50,13 @@ async def catalogue(
 @router.post("/plans", response_model=PlanEnvelope, status_code=201)
 async def create_plan(
     payload: PlanFields,
+    request: Request,
     actor: WriteActor,
     session: Session,
     response: Response,
     key: Annotated[uuid.UUID, Header(alias="Idempotency-Key")],
 ):
-    plan, created = await plans.create(session, actor, payload, key)
+    plan, created = await plans.create(session, actor, payload, key, request.app.state.places)
     response.status_code = 201 if created else 200
     return PlanEnvelope(plan=plan)
 
@@ -66,19 +67,31 @@ async def get_plan(plan_id: uuid.UUID, actor: Authenticated, session: Session):
 
 
 @router.patch("/plans/{plan_id}", response_model=PlanEnvelope)
-async def edit_plan(plan_id: uuid.UUID, payload: PlanPatch, actor: WriteActor, session: Session):
-    return PlanEnvelope(plan=await plans.update(session, actor, plan_id, payload))
+async def edit_plan(
+    plan_id: uuid.UUID, payload: PlanPatch, actor: WriteActor, session: Session, request: Request
+):
+    return PlanEnvelope(
+        plan=await plans.update(session, actor, plan_id, payload, request.app.state.places)
+    )
 
 
 @router.post("/plans/{plan_id}/publish", response_model=PlanEnvelope)
 async def publish_plan(
-    plan_id: uuid.UUID, payload: PlanCommand, actor: WriteActor, session: Session
+    plan_id: uuid.UUID, payload: PlanCommand, actor: WriteActor, session: Session, request: Request
 ):
-    return PlanEnvelope(plan=await plans.command(session, actor, plan_id, payload, "publish"))
+    return PlanEnvelope(
+        plan=await plans.command(
+            session, actor, plan_id, payload, "publish", request.app.state.places
+        )
+    )
 
 
 @router.post("/plans/{plan_id}/cancel", response_model=PlanEnvelope)
 async def cancel_plan(
-    plan_id: uuid.UUID, payload: PlanCommand, actor: WriteActor, session: Session
+    plan_id: uuid.UUID, payload: PlanCommand, actor: WriteActor, session: Session, request: Request
 ):
-    return PlanEnvelope(plan=await plans.command(session, actor, plan_id, payload, "cancel"))
+    return PlanEnvelope(
+        plan=await plans.command(
+            session, actor, plan_id, payload, "cancel", request.app.state.places
+        )
+    )

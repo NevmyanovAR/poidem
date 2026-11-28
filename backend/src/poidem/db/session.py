@@ -20,7 +20,11 @@ class Database:
                 "options": f"-c statement_timeout={settings.db_statement_timeout_ms}",
             },
         )
-        self.sessions = async_sessionmaker(self.engine, expire_on_commit=False)
+        self.sessions = async_sessionmaker(
+            self.engine,
+            expire_on_commit=False,
+            info={"positive_impressions_threshold": settings.positive_impressions_threshold},
+        )
 
     async def close(self) -> None:
         await self.engine.dispose()

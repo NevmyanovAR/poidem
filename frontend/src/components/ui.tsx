@@ -1,3 +1,4 @@
+import { PlaceCheckCaption } from './PlaceCheckCaption'
 import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { ArrowLeft, ArrowRight, CalendarDays, MapPin, Sparkles } from 'lucide-react'
@@ -37,7 +38,7 @@ export function PlanCard({ plan, onSelect }: { plan: PublishedPlan; onSelect?: (
     </Link>{!plan.own && <SafetyMenu label="Действия с планом" personName={plan.author.name} context={{ target_type: 'plan', context_type: 'plan', context_id: plan.id }} allowBlock />}</div>
     <div className="plan-content"><span className="eyebrow card-category">{plan.category}</span><h2><Link to={`/people/${plan.id}`} onClick={onSelect}>{plan.title}</Link></h2>
       <p className="plan-meta"><CalendarDays size={15} />{meetingDateLabel(plan)}</p>
-      <p className="plan-meta"><MapPin size={15} />{plan.place}</p>
+      <p className="plan-meta"><MapPin size={15} />{plan.place}</p><PlaceCheckCaption value={plan.placeCheckStatus} />
       <ModerationStatus value={plan.moderation} /><div className="card-bottom"><span className="people-caption">Автор: {plan.author.name}</span><Link className="text-link" to={`/people/${plan.id}`} onClick={onSelect}>Пойдём? <span className="action-arrow" aria-hidden="true"><ArrowRight size={16} /></span></Link></div>
     </div>
   </article>

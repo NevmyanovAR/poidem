@@ -8,7 +8,10 @@ import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 
+from poidem.db.models import EditorialIdea, Photo
 from poidem.settings import load_settings
+from sqlalchemy import create_engine, select
+from sqlalchemy.exc import SQLAlchemyError
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,6 +22,29 @@ def command(args):
         raise RuntimeError(
             "Не удалось выполнить шаг резервного копирования; проверь Docker и место на диске"
         )
+
+
+def backup_media_keys(settings):
+    """Только основные/редакционные фото; временные материалы проверки не копируются.
+
+    Allowlist также исключает уже отозванные файлы в очереди удаления и orphan-файлы.
+    Получается после подтверждённой остановки writers, теми же ролями/БД.
+    """
+    engine = create_engine(
+        settings.database_url.get_secret_value(),
+        hide_parameters=True,
+        connect_args={"connect_timeout": settings.db_connect_timeout_seconds},
+    )
+    try:
+        with engine.connect() as connection:
+            return {
+                *connection.execute(select(Photo.storage_key)).scalars(),
+                *connection.execute(select(EditorialIdea.image_key)).scalars(),
+            } - {None}
+    except SQLAlchemyError:
+        raise RuntimeError("Не удалось определить разрешённые фото для копии") from None
+    finally:
+        engine.dispose()
 
 
 def main():
@@ -35,6 +61,8 @@ def main():
         parser.error(
             "Сначала останови API и единственный bot/worker; затем укажи --writers-stopped"
         )
+    settings = load_settings()
+    allowed_media = backup_media_keys(settings)
     root = ROOT / ".local" / "backups"
     root.mkdir(parents=True, exist_ok=True)
     marker = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
@@ -57,11 +85,15 @@ def main():
         ]
     )
     command(["docker", "compose", "cp", f"db:{container_file}", str(dump)])
-    media_root = load_settings().media_root.resolve()
+    media_root = settings.media_root.resolve()
     with zipfile.ZipFile(archive, "x", compression=zipfile.ZIP_DEFLATED) as target:
         target.write(dump, "database.dump")
         for photo in media_root.glob("*.jpg"):
-            if photo.is_file() and photo.resolve().is_relative_to(media_root):
+            if (
+                photo.name in allowed_media
+                and photo.is_file()
+                and photo.resolve().is_relative_to(media_root)
+            ):
                 target.write(photo, "media/" + photo.name)
         target.writestr(
             "manifest.json",
@@ -74,6 +106,8 @@ def main():
                     ],
                     "static_editorial_assets": "Сохраняйте соответствующую версию frontend/public/images вместе с репозиторием",
                     "writers_stopped_confirmed": True,
+                    "verification_materials_included": False,
+                    "pending_verification_restore": "Проверочные материалы не восстанавливаются; потребуется новая заявка",
                 },
                 ensure_ascii=False,
             ),

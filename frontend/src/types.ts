@@ -18,6 +18,7 @@ export interface ModerationState {
 
 export interface Profile {
   userId?: string
+  photoVerified?: boolean
   photoId?: string
   serverVersion?: number
   name: string
@@ -29,6 +30,16 @@ export interface Profile {
   interests: string[]
 }
 
+export interface PlaceCandidate {
+  provider: string; provider_place_id: string; name: string; address: string
+  latitude: number | null; longitude: number | null; category: string; category_label: string
+  city?: string | null; status?: 'pending' | 'approved' | 'rejected' | 'hidden' | null
+  catalogue_version?: number | null; moderation_reason?: string | null
+}
+export interface CheckedPlace extends PlaceCandidate { checked_at: string | null; policy_version: string }
+export interface PlaceSelection { selection_id: string; place: CheckedPlace }
+export interface PlaceSearchResult { items: PlaceCandidate[]; attribution: string }
+
 export interface Plan {
   id: string
   title: string
@@ -36,6 +47,12 @@ export interface Plan {
   date: string
   time: string
   place: string
+  venue?: CheckedPlace | null
+  placeName?: string | null
+  placeAddress?: string | null
+  placeCheckStatus?: 'pending' | 'confirmed' | 'unconfirmed'
+  selectedPlaceId?: string | null
+  placeStatus?: 'legacy' | 'unselected' | 'catalogue' | 'pending' | 'rejected' | 'hidden'
   description: string
   image: string
   label: string
@@ -52,9 +69,10 @@ export interface Plan {
   allowedActions?: ('edit' | 'cancel' | 'publish')[]
 }
 
-export type PlanInput = Pick<Plan, 'title' | 'category' | 'date' | 'time' | 'place' | 'description'>
+export type PlanInput = Pick<Plan, 'title' | 'category' | 'date' | 'time' | 'place' | 'description' | 'selectedPlaceId' | 'placeName' | 'placeAddress'>
 
 export interface PublicProfile {
+  photoVerified?: boolean
   name: string; age: number; bio: string; interests: string[]; photo: string
   experience?: import('./api/feedback').Experience
 }
@@ -72,7 +90,7 @@ export interface PlanResponse {
 export interface ResponsePage { items: PlanResponse[]; nextCursor: string | null }
 export interface PairMatch {
   id: string; planId: string; title: string; image: string; startsAt: string
-  timeZone: string; place: string; createdAt: string
+  timeZone: string; place: string; placeCheckStatus?: Plan['placeCheckStatus']; createdAt: string
   participants: { role: 'author' | 'responder'; profile: PublicProfile | null }[]
   unreadCount: number; archived: boolean; meetingCancelled: boolean
   viewerRole: 'author' | 'responder'

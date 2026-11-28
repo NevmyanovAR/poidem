@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -90,3 +91,25 @@ class ReliabilityEvent(IdentityMixin, CreatedMixin, Base):
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     policy_version: Mapped[str] = mapped_column(Text)
     source_event_key: Mapped[str] = mapped_column(Text, unique=True)
+
+
+class PositiveImpression(Base):
+    """Независимый добровольный ответ. Партнёр определяется только через Survey/Match."""
+
+    __tablename__ = "positive_impressions"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["survey_id", "participant_side"],
+            ["survey_recipients.survey_id", "survey_recipients.participant_side"],
+            name="fk_positive_impressions_recipient",
+            ondelete="RESTRICT",
+        ),
+    )
+    survey_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    participant_side: Mapped[str] = mapped_column(Text, primary_key=True)
+    pleasant: Mapped[bool] = mapped_column(Boolean)
+    interesting: Mapped[bool] = mapped_column(Boolean)
+    comfortable: Mapped[bool] = mapped_column(Boolean)
+    consent_version: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

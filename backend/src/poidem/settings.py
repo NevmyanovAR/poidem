@@ -67,6 +67,17 @@ class Settings(BaseSettings):
     chat_messages_per_minute: int = Field(default=30, ge=1, le=120)
     telegram_bot_username: str = "ShallWeGoo_bot"
     notifications_enabled: bool = True
+    photo_verification_enabled: bool = False
+    photo_verification_policy_approved: bool = False
+    photo_verification_consent_version: str = ""
+    photo_verification_consent_text: str = ""
+    photo_verification_pending_hours: int | None = Field(default=None, ge=1, le=336)
+    photo_verification_reviewed_retention_hours: int | None = Field(default=None, ge=0, le=168)
+    photo_verification_challenge_seconds: int = Field(default=600, ge=60, le=1800)
+    photo_verification_attempts_per_day: int = Field(default=3, ge=1, le=20)
+    positive_impressions_threshold: int = Field(default=3, ge=1, le=100)
+    places_search_per_minute: int = Field(default=20, ge=1, le=60)
+    places_resolve_per_minute: int = Field(default=10, ge=1, le=30)
     notification_max_attempts: int = Field(default=5, ge=1, le=10)
     notification_lease_seconds: int = Field(default=90, ge=60, le=300)
     telegram_request_timeout_seconds: int = Field(default=10, ge=3, le=30)
@@ -91,7 +102,12 @@ class Settings(BaseSettings):
     def blank_address(cls, value):
         return None if value == "" else value
 
-    @field_validator("session_cookie_secure", mode="before")
+    @field_validator(
+        "session_cookie_secure",
+        "photo_verification_pending_hours",
+        "photo_verification_reviewed_retention_hours",
+        mode="before",
+    )
     @classmethod
     def blank_secure(cls, value):
         return None if value == "" else value

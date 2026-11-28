@@ -136,6 +136,14 @@ def api_settings(configured_settings, migrated_database, tmp_path):
             "trusted_hosts": ["testserver", "127.0.0.1", "localhost"],
             "cors_origins": ["http://127.0.0.1:5173"],
             "telegram_bot_token": SecretStr("42:unit-test-only-not-a-real-bot"),
+            "photo_verification_enabled": False,
+            "photo_verification_policy_approved": False,
+            "photo_verification_consent_version": "",
+            "photo_verification_consent_text": "",
+            "photo_verification_pending_hours": None,
+            "photo_verification_reviewed_retention_hours": None,
+            "places_search_per_minute": 60,
+            "places_resolve_per_minute": 30,
             "session_cookie_secure": False,
             "session_cookie_samesite": "lax",
             "media_root": tmp_path / "media",
@@ -149,8 +157,13 @@ def make_test_client(app):
 
 
 @pytest.fixture
-def app(api_settings):
-    return create_app(api_settings)
+def app(api_settings, migration_engine):
+    from place_helpers import FakePlaces
+
+    app = create_app(api_settings)
+    # Lifespan не заменяет этот тестовый helper; в runtime его нет.
+    app.state.test_places = FakePlaces(migration_engine)
+    return app
 
 
 @pytest.fixture

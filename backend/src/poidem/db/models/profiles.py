@@ -89,6 +89,7 @@ class Profile(Base):
     )
     bio: Mapped[str] = mapped_column(Text)
     photo_id: Mapped[uuid.UUID] = mapped_column(index=True)
+    photo_revision: Mapped[int] = mapped_column(server_default="1")
     moderation_status: Mapped[str] = mapped_column(
         moderation_type(), server_default="not_submitted"
     )

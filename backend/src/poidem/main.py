@@ -21,6 +21,8 @@ from poidem.api.routers import (
     connections,
     feedback,
     health,
+    photo_verification,
+    places,
     plans,
     reference_data,
     safety,
@@ -28,6 +30,7 @@ from poidem.api.routers import (
 from poidem.db.session import Database
 from poidem.services.archive import archive_loop
 from poidem.services.media import cleanup_loop
+from poidem.services.places import PlacesService
 from poidem.settings import Settings, load_settings
 
 
@@ -39,6 +42,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.database = Database(settings)
         app.state.migration_heads = health.migration_heads()
         app.state.settings = settings
+        app.state.places = PlacesService(settings)
         app.state.photo_limiter = anyio.CapacityLimiter(2)
         cleanup = asyncio.create_task(cleanup_loop(app.state.database, settings))
         archiving = asyncio.create_task(archive_loop(app.state.database))
@@ -69,6 +73,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_management.router)
     app.include_router(admin_management.public_router)
     app.include_router(plans.router)
+    app.include_router(places.router)
+    app.include_router(photo_verification.router)
     app.include_router(connections.router)
     app.include_router(feedback.router)
     app.include_router(activity.router)

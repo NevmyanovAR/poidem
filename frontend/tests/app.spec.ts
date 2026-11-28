@@ -77,6 +77,8 @@ test('inspiration prefills a plan and validates dates without saving outside aut
   await page.goto('/inspiration')
   await page.getByRole('link', { name: 'Создать план здесь' }).first().click()
   await expect(page.getByRole('textbox', { name: 'Название плана' })).toHaveValue('Арт-свидание вдвоём')
+  await page.getByRole('textbox', { name: 'Название места', exact: true }).fill('Синтетический музей')
+  await page.getByRole('textbox', { name: 'Адрес', exact: true }).fill('Тестовый город, улица 1')
   await page.getByRole('button', { name: 'Посмотреть план', exact: true }).click()
   await expect(page.getByText('Выбери дату', { exact: true })).toBeVisible()
   await page.locator('input[name=date]').fill('2020-01-01')

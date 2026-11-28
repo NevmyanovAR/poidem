@@ -1,3 +1,6 @@
+import type { VerificationState, VerificationRequest, VerificationDetail, VerificationPage } from './verification'
+import type { CheckedPlace, PlaceSelection, PlaceSearchResult } from '../types'
+import type { CataloguePlace, CataloguePage, PlaceFields } from './places'
 import { CATEGORY_CODES, INTEREST_CODES } from '../data/catalogs'
 import type { Plan, PlanInput, Profile, PublishedPlan, PlanResponse, PublicProfile, PairMatch, ResponseCapacity, MatchContact, ActivityPage, ActivityItem, ChatMessage, ChatState, MessagePage, ResponsePage } from '../types'
 import type { CreationQuota } from '../lib/planRules'
@@ -9,6 +12,7 @@ import type { AdminAccess, StaffRole, StaffMember, OffsetPage, AuditEntry, Notif
 
 interface PhotoDTO { id: string; url: string }
 interface ProfileDTO {
+  photo_verified?: boolean
   user_id: string; name: string; age: number; gender_code: Profile['gender']
   preference_code: Profile['preference']; bio: string; photo: PhotoDTO
   interest_ids: string[]; version: number
@@ -20,6 +24,8 @@ export interface AccountDTO {
   profile: ProfileDTO | null
 }
 interface PlanDTO {
+  place_name?: string | null; place_address?: string | null; place_check_status?: Plan['placeCheckStatus']
+  venue?: CheckedPlace | null; selected_place_id?: string | null; place_status?: Plan['placeStatus']
   id: string; author: { id: string; name: string }; title: string; category_code: string
   description: string; starts_at: string; time_zone: string; place: string
   publication_status: NonNullable<Plan['publicationStatus']>; moderation_status: NonNullable<Plan['moderation']>['status']
@@ -27,7 +33,7 @@ interface PlanDTO {
   updated_at?: string; archived?: boolean
   allowed_actions?: ('edit' | 'cancel' | 'publish')[]
 }
-interface PublicProfileDTO { name: string; age: number; bio: string; interests: string[]; photo: { url: string }; experience?: Experience }
+interface PublicProfileDTO { photo_verified?: boolean; name: string; age: number; bio: string; interests: string[]; photo: { url: string }; experience?: Experience }
 interface ResponseDTO {
   id: string; plan_id: string; plan: PlanDTO | null; status: PlanResponse['status']; version: number
   created_at: string; profile: PublicProfileDTO | null; match_id: string | null
@@ -39,7 +45,7 @@ interface ResponseDTO {
 }
 interface MatchDTO {
   id: string; plan_id: string; title: string; image: string; starts_at: string; time_zone: string
-  place: string; created_at: string; participants: { role: 'author' | 'responder'; profile: PublicProfileDTO | null }[]
+  place: string; place_check_status?: Plan['placeCheckStatus']; created_at: string; participants: { role: 'author' | 'responder'; profile: PublicProfileDTO | null }[]
   unread_count?: number; archived?: boolean; meeting_cancelled?: boolean
   viewer_role: PairMatch['viewerRole']
 }
@@ -71,6 +77,8 @@ function planFromDTO(dto: PlanDTO): PublishedPlan {
     createdAt: dto.created_at, serverVersion: dto.version,
     updatedAt: dto.updated_at, archived: dto.archived ?? false,
     allowedActions: dto.allowed_actions ?? [],
+    placeName: dto.place_name, placeAddress: dto.place_address, placeCheckStatus: dto.place_check_status,
+    venue: dto.venue, selectedPlaceId: dto.selected_place_id, placeStatus: dto.place_status,
     moderation: { status: dto.moderation_status, source: 'server' },
   }
 }
@@ -83,6 +91,8 @@ function planFields(plan: PlanInput) {
     throw new ApiError('PLAN_TIME_INVALID', 'Это местное время не существует — выбери другое время встречи')
   }
   return {
+    ...(plan.placeName != null && plan.placeAddress != null ? { place_name: plan.placeName.trim(), place_address: plan.placeAddress.trim() } : {}),
+    ...(plan.selectedPlaceId !== undefined ? { selected_place_id: plan.selectedPlaceId } : {}),
     title: plan.title.trim(), category_code: CATEGORY_CODES[plan.category], description: plan.description.trim(),
     starts_at: date.toISOString(), time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone, place: plan.place.trim(),
   }
@@ -92,6 +102,21 @@ const configured = import.meta.env.VITE_API_BASE_URL?.trim()
 const base = configured || (import.meta.env.DEV ? '/api/v1' : '')
 
 export class ApiClient {
+  verificationStatus(): Promise<VerificationState> { return this.request('/me/photo-verification') }
+  verificationChallenge(version: string): Promise<VerificationRequest> { return this.track(() => this.request('/me/photo-verification/challenge', { method: 'POST', body: JSON.stringify({ consent_version: version, consent_accepted: true }) })) }
+  verificationSubmit(id: string, file: File): Promise<VerificationRequest> { const body = new FormData(); body.append('file', file); return this.track(() => this.request(`/me/photo-verification/${encodeURIComponent(id)}/selfie`, { method: 'POST', body })) }
+  verificationWithdraw(value: VerificationRequest): Promise<VerificationRequest> { return this.track(() => this.request(`/me/photo-verification/${encodeURIComponent(value.id)}/withdraw`, { method: 'POST', body: JSON.stringify({ expected_version: value.version }) })) }
+  verificationQueue(state: string, offset = 0): Promise<VerificationPage> { return this.request(`/admin/photo-verifications?${new URLSearchParams({ state, offset: String(offset) })}`) }
+  verificationDetail(id: string): Promise<VerificationDetail> { return this.request(`/admin/photo-verifications/${encodeURIComponent(id)}`) }
+  verificationDecision(value: VerificationRequest, decision: string, reason_code?: string, comment?: string): Promise<VerificationRequest> { return this.track(() => this.request(`/admin/photo-verifications/${encodeURIComponent(value.id)}/decision`, { method: 'POST', body: JSON.stringify({ expected_version: value.version, decision, reason_code, comment }) })) }
+  searchPlaces(query: string, signal?: AbortSignal): Promise<PlaceSearchResult> { return this.request(`/places/search?q=${encodeURIComponent(query)}`, { signal }) }
+  resolvePlace(identity: string): Promise<PlaceSelection> { return this.track(() => this.request('/places/resolve', { method: 'POST', body: JSON.stringify({ provider_place_id: identity }) })) }
+  proposePlace(fields: PlaceFields): Promise<PlaceSelection> { return this.track(() => this.request('/places/proposals', { method: 'POST', body: JSON.stringify(fields) })) }
+  cataloguePlaces(state: string, q: string, offset: number): Promise<CataloguePage> { return this.request(`/admin/places?${new URLSearchParams({ ...(state ? { state } : {}), q, offset: String(offset) })}`) }
+  cataloguePlace(id: string): Promise<CataloguePlace> { return this.request(`/admin/places/${id}`) }
+  editCataloguePlace(place: CataloguePlace, fields: PlaceFields, reason: string, confirmed: boolean): Promise<CataloguePlace> { return this.track(() => this.request(`/admin/places/${place.id}`, { method: 'PUT', body: JSON.stringify({ ...fields, expected_version: place.version, reason, public_access_confirmed: confirmed }) })) }
+  decideCataloguePlace(place: CataloguePlace, action: string, reason: string, confirmed: boolean): Promise<CataloguePlace> { return this.track(() => this.request(`/admin/places/${place.id}/decision`, { method: 'POST', body: JSON.stringify({ expected_version: place.version, action, reason, public_access_confirmed: confirmed }) })) }
+  importCatalogue(csv: string, confirmed: boolean): Promise<{ created: number; skipped: number }> { return this.track(() => this.request('/admin/places/import', { method: 'POST', body: JSON.stringify({ csv, public_access_confirmed: confirmed }) })) }
   adminTeam(filters: Record<string, string>, cursor?: string): Promise<AdminPage<StaffMember>> { return this.request(`/admin/team?${new URLSearchParams({ ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value)), ...(cursor ? { cursor } : {}) })}`) }
   adminRole(member: StaffMember, role: StaffRole, reason: string): Promise<{ changed: boolean }> { return this.track(() => this.request(`/admin/team/${encodeURIComponent(member.id)}/role`, { method: 'PUT', body: JSON.stringify({ role, version: member.version, confirm_user_id: member.id, reason }) })) }
   adminAudit(filters: Record<string, string>): Promise<OffsetPage<AuditEntry>> { return this.request(`/admin/audit?${new URLSearchParams(filters)}`) }
@@ -153,7 +178,7 @@ export class ApiClient {
   private publicProfile(value: PublicProfileDTO | null): PublicProfile | null {
     if (!value) return null
     const origin = new URL(base || '/api/v1', window.location.origin).origin
-    return { ...value, photo: value.photo?.url ? new URL(value.photo.url, origin).toString() : '' }
+    return { ...value, photoVerified: value.photo_verified ?? false, photo: value.photo?.url ? new URL(value.photo.url, origin).toString() : '' }
   }
   private responseFromDTO(value: ResponseDTO): PlanResponse {
     const history = value.history_context
@@ -167,7 +192,7 @@ export class ApiClient {
   }
   private matchFromDTO(value: MatchDTO): PairMatch {
     return { id: value.id, planId: value.plan_id, title: value.title, image: value.image, startsAt: value.starts_at,
-      timeZone: value.time_zone, place: value.place, createdAt: value.created_at,
+      timeZone: value.time_zone, place: value.place, placeCheckStatus: value.place_check_status, createdAt: value.created_at,
       unreadCount: value.unread_count ?? 0, archived: value.archived ?? false, meetingCancelled: value.meeting_cancelled ?? false,
       viewerRole: value.viewer_role,
       participants: value.participants.map(p => ({ role: p.role, profile: this.publicProfile(p.profile) })) }
@@ -275,6 +300,11 @@ export class ApiClient {
   saveFeedback(id: string, payload: FeedbackInput): Promise<SurveyState> {
     return this.track(() => this.request(`/matches/${encodeURIComponent(id)}/feedback`, { method: 'POST', body: JSON.stringify(payload) }))
   }
+  impressions(id: string): Promise<import('./feedback').ImpressionState> { return this.request(`/matches/${id}/impressions`) }
+  saveImpressions(id: string, options: string[]): Promise<import('./feedback').ImpressionState> { return this.track(() => this.request(`/matches/${id}/impressions`, { method: 'PUT', body: JSON.stringify({ options, consent_accepted: true, consent_version: 'positive-impressions-v1' }) })) }
+  withdrawImpressions(id: string): Promise<import('./feedback').ImpressionState> { return this.track(() => this.request(`/matches/${id}/impressions`, { method: 'DELETE' })) }
+  placeChecks(state: string, offset: number): Promise<import('./places').PlaceCheckPage> { return this.request(`/admin/place-checks?${new URLSearchParams({ ...(state ? { state } : {}), offset: String(offset) })}`) }
+  decidePlaceCheck(value: import('./places').PlaceCheck, decision: string, reason: string, evidence: boolean): Promise<import('./places').PlaceCheck> { return this.track(() => this.request(`/admin/place-checks/${value.id}/decision`, { method: 'POST', body: JSON.stringify({ expected_revision: value.revision, expected_version: value.version, decision, reason, evidence_confirmed: evidence }) })) }
   reliability(): Promise<Experience> { return this.request('/me/reliability') }
   async contact(id: string): Promise<MatchContact> {
     const value = await this.request<{ available: boolean; telegram_url: string | null; reason: string | null }>(`/matches/${encodeURIComponent(id)}/contact`)
@@ -298,10 +328,13 @@ export class ApiClient {
     if (options.method && options.method !== 'GET' && this.csrf) headers.set('X-CSRF-Token', this.csrf)
     let response: Response
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 10000)
+    const abort = () => controller.abort()
+    options.signal?.addEventListener('abort', abort, { once: true })
+    if (options.signal?.aborted) controller.abort()
+    const timeout = setTimeout(abort, 10000)
     try { response = await fetch(target, { ...options, headers, signal: controller.signal, credentials: 'include', cache: 'no-store' }) }
     catch { throw new ApiError('NETWORK_ERROR', 'Не удалось связаться с сервером. Попробуй ещё раз') }
-    finally { clearTimeout(timeout) }
+    finally { clearTimeout(timeout); options.signal?.removeEventListener('abort', abort) }
     if (response.status === 204) return undefined as T
     let payload: unknown
     try { payload = await response.json() } catch { throw new ApiError('API_UNAVAILABLE', 'Сервер недоступен. Проверь адрес API', response.status) }
@@ -399,7 +432,7 @@ export class ApiClient {
     if (!dto) return null
     const apiOrigin = new URL(base || '/api/v1', window.location.origin).origin
     return {
-      userId: dto.user_id, photoId: dto.photo.id, serverVersion: dto.version,
+      photoVerified: dto.photo_verified ?? false, userId: dto.user_id, photoId: dto.photo.id, serverVersion: dto.version,
       name: dto.name, age: String(dto.age), gender: dto.gender_code,
       preference: dto.preference_code, bio: dto.bio,
       photo: new URL(dto.photo.url, apiOrigin).toString(),

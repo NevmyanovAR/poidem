@@ -1,3 +1,6 @@
+import { ReputationBadges } from './ReputationBadges'
+import { PlaceCheckCaption } from './PlaceCheckCaption'
+import '../verification.css'
 import { useState, type ReactNode } from 'react'
 import { ArrowRight, CalendarDays, MapPin } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -17,8 +20,8 @@ function CardFrame({ photo, alt = '', portrait, kind, children }: { photo?: stri
     {portrait ?? (photo && <Photo src={photo} alt={alt} />)}<div className="my-plan-content">{children}</div>
   </article>
 }
-function MeetingMeta({ value }: { value: { startsAt?: string; timeZone?: string; date?: string; time?: string; place: string } }) {
-  return <div className="record-meta"><p className="plan-meta"><CalendarDays size={15} /><span>{meetingDateLabel(value)}</span></p><p className="plan-meta"><MapPin size={15} /><span>{value.place}</span></p></div>
+function MeetingMeta({ value }: { value: { startsAt?: string; timeZone?: string; date?: string; time?: string; place: string; placeCheckStatus?: import('../types').Plan['placeCheckStatus'] } }) {
+  return <div className="record-meta"><p className="plan-meta"><CalendarDays size={15} /><span>{meetingDateLabel(value)}</span></p><p className="plan-meta"><MapPin size={15} /><span>{value.place}</span></p><PlaceCheckCaption value={value.placeCheckStatus} /></div>
 }
 export function MatchActions({ pair }: { pair: PairMatch }) {
   const location = useLocation(), origin = { returnTo: location.pathname === '/plans' ? location.pathname + location.search : '/chats' }
@@ -34,7 +37,7 @@ export function OwnPlanCard({ plan, onCancel, onChange, pendingCount = 0, matchI
     <div className="record-heading"><span className="plan-status">{plan.archived ? `Архив · ${label}` : label}</span>{(actions.includes('edit') || actions.includes('cancel')) && <RecordMenu>{actions.includes('edit') && <Link to={`/create?edit=${plan.id}`} state={origin}>Изменить</Link>}{actions.includes('cancel') && <button type="button" disabled={busy} onClick={() => onCancel(plan)}>Отменить план</button>}</RecordMenu>}<h2>{plan.title}</h2></div>
     <MeetingMeta value={plan} />
     {plan.archived && plan.own && <ArchiveResponseHistory planId={plan.id} />}
-    <div className="plan-actions">{pendingCount > 0 ? <Link className="button button-primary record-primary" to={`/plans?tab=incoming&plan=${plan.id}`} state={origin}>Посмотреть отклики ({pendingCount})<ActionArrow /></Link> : matchId ? <Link className="text-link" to={`/match/${matchId}`} state={origin}>Подробнее о встрече<ActionArrow /></Link> : actions.includes('publish') ? <button type="button" className="button button-primary record-primary" disabled={busy} onClick={async () => { if (await publishPlan(plan)) onChange?.() }}>Опубликовать<ActionArrow /></button> : !plan.archived && <Link className="text-link" to={`/people/${plan.id}`} state={origin}>Посмотреть план<ActionArrow /></Link>}</div>
+    <div className="plan-actions">{pendingCount > 0 ? <Link className="button button-primary record-primary" to={`/plans?tab=incoming&plan=${plan.id}`} state={origin}>Посмотреть отклики ({pendingCount})<ActionArrow /></Link> : matchId ? <Link className="text-link" to={`/match/${matchId}`} state={origin}>Подробнее о встрече<ActionArrow /></Link> : actions.includes('publish') ? <button type="button" className="button button-primary record-primary" disabled={busy} onClick={async () => { if (await publishPlan(plan)) onChange?.() }}>Опубликовать<ActionArrow /></button> : plan.publicationStatus === 'draft' && actions.includes('edit') ? <Link className="button button-primary record-primary" to={`/create?edit=${plan.id}`} state={origin}>Посмотреть черновик<ActionArrow /></Link> : !plan.archived && <Link className="text-link" to={`/people/${plan.id}`} state={origin}>Посмотреть план<ActionArrow /></Link>}</div>
   </CardFrame>
 }
 function PendingResponseCard({ response, onChange }: { response: PlanResponse; onChange?: () => void }) {
@@ -46,6 +49,7 @@ function PendingResponseCard({ response, onChange }: { response: PlanResponse; o
   return <CardFrame photo={!incoming ? profile?.photo ?? response.plan?.image : undefined} portrait={incoming ? <ProfilePhoto key={profile?.photo ?? 'missing'} src={profile?.photo ?? ''} name={profile?.name ?? 'кандидата'} /> : undefined} alt={profile?.name ?? 'Иллюстрация плана'} kind={incoming ? 'incoming' : 'outgoing'}>
     <div className="record-heading"><span className="plan-status">{incoming ? 'Полученный отклик' : 'Ожидает ответа'}</span><h2>{response.plan?.title ?? response.historyContext?.planTitle ?? 'План недоступен'}</h2></div>
     {profile && <div className="record-person-row"><p className="record-person">{profile.name}, {profile.age}</p><SafetyMenu label="Действия с анкетой" personName={profile.name} context={{ target_type: 'profile', context_type: 'response', context_id: response.id }} allowBlock onBlocked={onChange} /></div>}
+    {incoming && profile && <ReputationBadges photoVerified={profile.photoVerified} experience={profile.experience} />}
     {response.plan && <MeetingMeta value={response.plan} />}
     {profile && <div className="record-additional"><p className="review-description response-bio-preview">{profile.bio}</p></div>}
     {!!actions.length && <div className="plan-actions">

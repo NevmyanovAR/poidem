@@ -39,7 +39,10 @@ async def public_profile(session, user_id, photo_url: str) -> tuple[PublicProfil
             .order_by(ProfileInterest.position)
         )
     ).all()
+    from poidem.services.photo_verification import verified
+
     return PublicProfileDTO(
+        photo_verified=await verified(session, profile, photo),
         name=profile.name,
         age=profile.age,
         bio=profile.bio,

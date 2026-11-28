@@ -13,6 +13,7 @@ class PublicPhotoDTO(BaseModel):
 
 
 class PublicProfileDTO(BaseModel):
+    photo_verified: bool = False
     name: str
     age: int
     bio: str
@@ -94,6 +95,7 @@ class MatchDTO(BaseModel):
     starts_at: datetime
     time_zone: str
     place: str
+    place_check_status: Literal["pending", "confirmed", "unconfirmed"] = "pending"
     created_at: datetime
     participants: list[ParticipantDTO] = Field(min_length=2, max_length=2)
     unread_count: int = 0

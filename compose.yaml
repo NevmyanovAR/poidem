@@ -28,6 +28,16 @@ x-runtime-environment: &runtime-environment
   TELEGRAM_REQUEST_TIMEOUT_SECONDS: ${TELEGRAM_REQUEST_TIMEOUT_SECONDS:-10}
   CHAT_NOTIFICATION_WINDOW_SECONDS: ${CHAT_NOTIFICATION_WINDOW_SECONDS:-60}
   CHAT_MESSAGES_PER_MINUTE: ${CHAT_MESSAGES_PER_MINUTE:-30}
+  PHOTO_VERIFICATION_ENABLED: ${PHOTO_VERIFICATION_ENABLED:-false}
+  PHOTO_VERIFICATION_POLICY_APPROVED: ${PHOTO_VERIFICATION_POLICY_APPROVED:-false}
+  PHOTO_VERIFICATION_CONSENT_VERSION: ${PHOTO_VERIFICATION_CONSENT_VERSION:-}
+  PHOTO_VERIFICATION_CONSENT_TEXT: ${PHOTO_VERIFICATION_CONSENT_TEXT:-}
+  PHOTO_VERIFICATION_PENDING_HOURS: ${PHOTO_VERIFICATION_PENDING_HOURS:-}
+  PHOTO_VERIFICATION_REVIEWED_RETENTION_HOURS: ${PHOTO_VERIFICATION_REVIEWED_RETENTION_HOURS:-}
+  PHOTO_VERIFICATION_CHALLENGE_SECONDS: ${PHOTO_VERIFICATION_CHALLENGE_SECONDS:-600}
+  PHOTO_VERIFICATION_ATTEMPTS_PER_DAY: ${PHOTO_VERIFICATION_ATTEMPTS_PER_DAY:-3}
+  PLACES_SEARCH_PER_MINUTE: ${PLACES_SEARCH_PER_MINUTE:-20}
+  PLACES_RESOLVE_PER_MINUTE: ${PLACES_RESOLVE_PER_MINUTE:-10}
   MINI_APP_URL: ${MINI_APP_URL:-}
   API_PUBLIC_URL: ${API_PUBLIC_URL:-}
   INIT_DATA_MAX_AGE_SECONDS: ${INIT_DATA_MAX_AGE_SECONDS:-300}
@@ -117,6 +127,13 @@ services:
       MIGRATION_DATABASE_URL_TEST: postgresql+psycopg://poidem_migrator:${POSTGRES_MIGRATION_PASSWORD}@db-test:5432/poidem_test
     depends_on:
       db-test: {condition: service_healthy}
+    # Tests load repo-level tools and the generated client policy. Mount only
+    # these sources, never the root .env, user media or production credentials.
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./deploy/configure.py:/app/deploy/configure.py:ro
+      - ./deploy/ops:/app/deploy/ops:ro
+      - ./frontend/src/config/contentPolicy.generated.json:/app/frontend/src/config/contentPolicy.generated.json:ro
     command: [python, -m, pytest, -p, "no:cacheprovider", -c, backend/pyproject.toml, backend/tests]
 
 volumes:

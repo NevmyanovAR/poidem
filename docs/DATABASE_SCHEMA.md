@@ -1,5 +1,13 @@
 # Проект схемы PostgreSQL
 
+**D67 / этап 11В — актуальные требования:** свободные название/адрес без предварительного одобрения; необязательная проверка точной версии места, 0014/39 таблиц. Каталог D66 и исторические адреса сохранены, но не блокируют публикацию. Репутация — три независимых положительных признака, прежние фото/встречи + добровольные впечатления разных партнёров; старые приватные оценки не используются. [Устройство, формулы и API](FREE_PLACES_REPUTATION_STAGE11V.md)
+
+**D66 / предыдущая реализация:** собственный каталог общественных мест без 2ГИС/внешних ключей, ручная модерация/CSV/0013 (38 таблиц), исторические адреса сохранены. Фотоверификация — компактный UI без изменения backend-проверки. Это заменяет прежние условия внешнего Places API. [Реализация, API и запуск](LOCAL_PLACES_AND_VERIFICATION_UX.md)
+
+**D65 / head 0012:** 37 прикладных таблиц. Новые profiles.photo_revision (старым 1) и photo_verifications с одним pending на пользователя, версией/согласиями/сроками/приватными ключами. Подтверждений задним числом нет. Материалы чистит прежний MediaDeletion; результат не требует вечного хранения селфи. [Жизненный цикл](PHOTO_VERIFICATION_STAGE11B.md)
+
+**D64 / head 0011:** 36 прикладных таблиц. Добавлены plans.venue JSONB, nullable place_policy_version (старые строки NULL, новые public-poi-v1), place_selections с UNIQUE(user_id,provider,provider_place_id), FK CASCADE только собственных выборов и индексом user_id/created_at. Старые планы/места Match/чат/история не переписываются. [Снимки/совместимость](PLACES_STAGE11A.md#миграция-и-совместимость)
+
 **D62 / head 0010:** всего 35 таблиц. users.role_code расширен до user/analyst/moderator/admin/owner без изменения прежних значений. Новые editorial_ideas (3 исходные идеи, сохранённые slug/фото/контент, draft/published/version/order) и bot_heartbeats (два цикла одного бота). notification_jobs/safe_error_code и прежний аудит сохранены, второй очереди/системы пользователей нет. Редакционные фото в общем MEDIA_ROOT, orphan scan учитывает новые ссылки. [Описание](ADMIN_STAGE9B.md)
 
 **D61 / этап 9, head 0009:** новых таблиц нет (33). В users/plans/matches/chat_messages добавлены индексы (created_at,id) для агрегатов и каталогов. analytics_events получает неперсональный marker measurement:D61; новые plan_published/plan_detail_view используют существующий UNIQUE(event_key), доверенного actor UUID и plan UUID, policy-only dimensions. История не backfill. admin_audit_log фиксирует read/export вместе с прежними решениями, без копий персонального содержимого. [Методика и миграция](ADMIN_STAGE9.md)

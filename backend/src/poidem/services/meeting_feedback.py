@@ -74,7 +74,13 @@ async def experience(session, user_id):
             responder.c.met.is_(True),
         )
     )
-    return ExperienceDTO(unique_confirmed_partners=await session.scalar(query))
+    from poidem.services.impressions import count_partners
+
+    return ExperienceDTO(
+        unique_confirmed_partners=await session.scalar(query),
+        pleasant_communication=await count_partners(session, user_id)
+        >= session.info.get("positive_impressions_threshold", 3),
+    )
 
 
 async def status_for(session, match, actor_id):

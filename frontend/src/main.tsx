@@ -11,6 +11,7 @@ import App from './App'
 import { ApiProvider } from './state/ApiProvider'
 import './theme.css'
 import './styles.css'
+import './polish.css'
 import { PhotoViewerProvider } from './components/PhotoViewer'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

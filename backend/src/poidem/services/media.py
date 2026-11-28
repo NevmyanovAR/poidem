@@ -158,6 +158,11 @@ async def try_drain_deletions(database, settings: Settings, keys: list[str]) -> 
 async def cleanup_loop(database, settings: Settings) -> None:
     while True:
         try:
+            from poidem.services import photo_verification
+
+            async with database.sessions() as session:
+                await photo_verification.cleanup(session)
+                await session.commit()
             await collect_orphans(database, settings)
             await drain_deletions(database, settings)
             async with database.sessions() as session:
@@ -174,7 +179,7 @@ async def cleanup_loop(database, settings: Settings) -> None:
 
 async def collect_orphans(database, settings: Settings) -> None:
     """Файлы незавершённой записи после аварии: часовой запас для активных запросов."""
-    from poidem.db.models import EditorialIdea, Photo
+    from poidem.db.models import EditorialIdea, Photo, PhotoVerification
 
     cutoff = datetime.now(UTC).timestamp() - 3600
 
@@ -216,5 +221,9 @@ async def collect_orphans(database, settings: Settings) -> None:
                 )
             ).all()
         )
+        for column in (PhotoVerification.primary_key, PhotoVerification.selfie_key):
+            known.update(
+                (await session.scalars(select(column).where(column.in_(candidates)))).all()
+            )
         await queue_deletions(session, [key for key in candidates if key not in known])
         await session.commit()

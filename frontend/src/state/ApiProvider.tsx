@@ -36,6 +36,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   const autoAuthDisabled = useRef(false)
   const lastLaunch = useRef('')
   const authEpoch = useRef(0)
+  const verificationGeneration = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const refreshFlight = useRef<{ epoch: number; task: Promise<void> } | null>(null)
   const connectionFlight = useRef<{ epoch: number; task: Promise<void> } | null>(null)
@@ -193,6 +194,9 @@ export function ApiProvider({ children }: { children: ReactNode }) {
     return result
   }, [authorization.status])
   const meeting = useMemo<AppContextValue['meeting']>(() => ({
+    impressions: id => readConnection(() => client.impressions(id)),
+    saveImpressions: (...args) => readConnection(() => client.saveImpressions(...args)),
+    withdrawImpressions: id => readConnection(() => client.withdrawImpressions(id)),
     survey: id => readConnection(() => client.survey(id)),
     saveFeedback: (...args) => readConnection(() => client.saveFeedback(...args)),
     reliability: () => readConnection(() => client.reliability()),
@@ -217,6 +221,28 @@ export function ApiProvider({ children }: { children: ReactNode }) {
     adminSystem: () => readConnection(() => client.adminSystem()),
   }), [client, readConnection])
   const editorial = useMemo<AppContextValue['editorial']>(() => ({ ideas: offset => client.ideas(offset), idea: id => client.idea(id), mediaUrl: path => client.mediaUrl(path) }), [client])
+  const verification = useMemo<AppContextValue['verification']>(() => ({
+    verificationStatus: async () => { const turn = verificationGeneration.current; const result = await readConnection(() => client.verificationStatus()); if (turn === verificationGeneration.current) setData(current => current.profile && current.profile.photoId === result.photo_id ? { ...current, profile: { ...current.profile, photoVerified: result.photo_verified } } : current); return result },
+    verificationChallenge: version => readConnection(() => client.verificationChallenge(version)),
+    verificationSubmit: (...args) => readConnection(() => client.verificationSubmit(...args)),
+    verificationWithdraw: async entry => { verificationGeneration.current++; const result = await readConnection(() => client.verificationWithdraw(entry)); setData(current => current.profile ? { ...current, profile: { ...current.profile, photoVerified: false } } : current); return result },
+    verificationQueue: (...args) => readConnection(() => client.verificationQueue(...args)),
+    verificationDetail: id => readConnection(() => client.verificationDetail(id)),
+    verificationDecision: (...args) => readConnection(() => client.verificationDecision(...args)),
+    mediaUrl: path => client.mediaUrl(path),
+  }), [client, readConnection])
+  const places = useMemo<AppContextValue['places']>(() => ({
+    placeChecks: (...args) => readConnection(() => client.placeChecks(...args)),
+    decidePlaceCheck: (...args) => readConnection(() => client.decidePlaceCheck(...args)),
+    searchPlaces: (...args) => readConnection(() => client.searchPlaces(...args)),
+    resolvePlace: id => readConnection(() => client.resolvePlace(id)),
+    proposePlace: fields => readConnection(() => client.proposePlace(fields)),
+    cataloguePlaces: (...args) => readConnection(() => client.cataloguePlaces(...args)),
+    cataloguePlace: id => readConnection(() => client.cataloguePlace(id)),
+    editCataloguePlace: (...args) => readConnection(() => client.editCataloguePlace(...args)),
+    decideCataloguePlace: (...args) => readConnection(() => client.decideCataloguePlace(...args)),
+    importCatalogue: (...args) => readConnection(() => client.importCatalogue(...args)),
+  }), [client, readConnection])
   const trackPlanView = useCallback((id: string) => readConnection(() => client.trackPlanView(id)), [client, readConnection])
   const safety = useMemo<AppContextValue['safety']>(() => ({
     report: (...args) => readConnection(() => client.report(...args)),
@@ -292,7 +318,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
     } finally { if (active.current) setBusy(false) }
   }
 
-  return <AppContext.Provider value={{
+  return <AppContext.Provider value={{ places, verification,
     editorial,
     safety, meeting, admin, trackPlanView,
     navigationSummary: authorization.status === 'verified' ? navigationSummary : null, refreshNavigation, activityRevision, loadDialogs,

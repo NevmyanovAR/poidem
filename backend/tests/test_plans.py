@@ -39,9 +39,12 @@ def body(**changes):
 
 
 def create(client, account, payload=None, key=None):
+    from place_helpers import chosen_fields
+
+    payload = chosen_fields(client, account, payload or body())
     return client.post(
         "/api/v1/plans",
-        json=payload or body(),
+        json=payload,
         headers={
             **headers(account),
             "Idempotency-Key": str(key or uuid.uuid4()),

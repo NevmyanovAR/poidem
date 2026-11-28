@@ -1,3 +1,6 @@
+import { ReputationBadges } from '../components/ReputationBadges'
+import { PlaceCheckCaption } from '../components/PlaceCheckCaption'
+import '../verification.css'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { returnTarget } from '../lib/navigation'
@@ -10,7 +13,6 @@ import { SafetyMenu } from '../components/SafetyMenu'
 import { ProfilePhoto } from '../components/PhotoViewer'
 import { RefreshGate, useAutoRefresh } from '../lib/autoRefresh'
 import { ApiError } from '../api/client'
-import { ExperienceCaption } from '../components/MeetingFeedback'
 
 export function People() {
   const location = useLocation()
@@ -57,8 +59,8 @@ export function People() {
       <AuthorPhoto key={profile.photo} src={profile.photo} name={profile.name} />
       <div className="person-details">
         <h1>{profile.name}<span>, {profile.age}</span></h1>
-        <ExperienceCaption value={profile.experience} />
-        <section className="person-plan" aria-label="План встречи"><h2>{plan.title}</h2><p><CalendarDays size={16} /><span>{meetingDateLabel(plan)}</span></p><p><MapPin size={16} /><span>{plan.place}</span></p></section>
+        <ReputationBadges photoVerified={profile.photoVerified} experience={profile.experience} />
+        <section className="person-plan" aria-label="План встречи"><h2>{plan.title}</h2><p><CalendarDays size={16} /><span>{meetingDateLabel(plan)}</span></p><p><MapPin size={16} /><span>{plan.place}</span></p><PlaceCheckCaption value={plan.placeCheckStatus} /></section>
         <div className="person-response">
         {plan.own ? <Link className="button button-outline invite-button" to="/plans">Управлять планом</Link> : <>
           {capacity.ownResponseId ? <div className="waiting-panel"><span className="eyebrow">Ожидает ответа</span><p>Автор увидит твою анкету и сможет принять или отклонить отклик</p><Link className="button button-outline" to="/plans?tab=outgoing">Мои отклики</Link></div> : <button type="button" className="button button-primary invite-button" disabled={busy || !capacity.canRespond} onClick={async () => {
